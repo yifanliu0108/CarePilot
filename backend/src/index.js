@@ -6,6 +6,7 @@ import {
   createCloudSession,
   getCloudSession,
 } from "./browserUseCloud.js";
+import { buildGroceryPriceTask } from "./groceryCloudTask.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildDailyMealPlan } from "./mealPlan.js";
@@ -117,16 +118,29 @@ app.get("/api/journey/cloud-status", (_req, res) => {
 
 /**
  * Start a task on Browser Use Cloud (https://cloud.browser-use.com/).
- * Body: { task: string, model?: string } — see API v3 Create Session.
+ * Body: { task: string, model?: string } — or —
+ * { grocery: { userMessage?, priceCheckItems?, nutritionSummary? }, model?: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
-  const task = req.body?.task;
-  if (typeof task !== "string" || !task.trim()) {
-    res.status(400).json({ error: "body.task (non-empty string) required" });
+  const g = req.body?.grocery;
+  let task;
+  if (g && typeof g === "object") {
+    task = buildGroceryPriceTask({
+      userMessage: typeof g.userMessage === "string" ? g.userMessage : "",
+      priceCheckItems: Array.isArray(g.priceCheckItems) ? g.priceCheckItems : [],
+      nutritionSummary: typeof g.nutritionSummary === "string" ? g.nutritionSummary : "",
+    });
+  } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
+    task = req.body.task.trim();
+  } else {
+    res.status(400).json({
+      error:
+        "body.task (non-empty string) required, or body.grocery object for Walmart/Vons/Ralphs price check",
+    });
     return;
   }
   try {
-    const session = await createCloudSession(task.trim(), {
+    const session = await createCloudSession(task, {
       model: typeof req.body?.model === "string" ? req.body.model : undefined,
     });
     res.json(session);

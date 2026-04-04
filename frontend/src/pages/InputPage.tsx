@@ -1,12 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
+import { BodyUnitToggleBar } from "../components/BodyUnitToggleBar";
 import { useSession } from "../context/SessionContext";
-
-function cmFromFtIn(ft: number, inch: number) {
-  const totalIn = ft * 12 + inch;
-  return Math.round(totalIn * 2.54 * 10) / 10;
-}
+import {
+  cmFromFtIn,
+  ftInFromCm,
+  kgFromLb,
+  lbFromKg,
+  loadBodyUnitMode,
+  saveBodyUnitMode,
+  type BodyUnitMode,
+} from "../lib/bodyUnits";
 
 const DEFAULT_RATING = 3;
 
@@ -47,8 +52,8 @@ export default function InputPage() {
 
   const [age, setAge] = useState("");
   const [heightCm, setHeightCm] = useState("");
-  const [weightKg, setWeightKg] = useState("");
-  const [useMetric, setUseMetric] = useState(true);
+  const [weightInput, setWeightInput] = useState("");
+  const [unitMode, setUnitMode] = useState<BodyUnitMode>(() => loadBodyUnitMode());
   const [ft, setFt] = useState("5");
   const [inch, setInch] = useState("8");
   const [sleepRating, setSleepRating] = useState(DEFAULT_RATING);
@@ -62,8 +67,20 @@ export default function InputPage() {
   useEffect(() => {
     if (!p) return;
     if (p.age != null) setAge(String(p.age));
-    if (p.heightCm != null) setHeightCm(String(p.heightCm));
-    if (p.weightKg != null) setWeightKg(String(p.weightKg));
+    if (p.heightCm != null) {
+      setHeightCm(String(p.heightCm));
+      const { ft: f, inch: i } = ftInFromCm(p.heightCm);
+      setFt(String(f));
+      setInch(String(i));
+    }
+    if (p.weightKg != null) {
+      const mode = loadBodyUnitMode();
+      setWeightInput(
+        mode === "metric"
+          ? String(p.weightKg)
+          : String(lbFromKg(p.weightKg)),
+      );
+    }
     setSleepRating(p.sleepRating ?? DEFAULT_RATING);
     setCognitiveRating(p.cognitiveRating ?? DEFAULT_RATING);
     setDigestiveRating(p.digestiveRating ?? DEFAULT_RATING);
@@ -71,12 +88,59 @@ export default function InputPage() {
     setImmuneRating(p.immuneRating ?? DEFAULT_RATING);
   }, [p]);
 
+  function handleUnitModeChange(next: BodyUnitMode) {
+    if (next === unitMode) return;
+    if (next === "imperial") {
+      const h = parseFloat(heightCm);
+      if (Number.isFinite(h) && h > 0) {
+        const { ft: f, inch: i } = ftInFromCm(h);
+        setFt(String(f));
+        setInch(String(i));
+      }
+      const wkg = parseFloat(weightInput);
+      if (Number.isFinite(wkg) && wkg > 0) {
+        setWeightInput(String(lbFromKg(wkg)));
+      }
+    } else {
+      const f = parseFloat(ft);
+      const i = parseFloat(inch);
+      if (Number.isFinite(f) && Number.isFinite(i)) {
+        const cm = cmFromFtIn(f, i);
+        if (Number.isFinite(cm) && cm > 0) setHeightCm(String(cm));
+      }
+      const wlb = parseFloat(weightInput);
+      if (Number.isFinite(wlb) && wlb > 0) {
+        const kg = kgFromLb(wlb);
+        setWeightInput(String(Math.round(kg * 10) / 10));
+      }
+    }
+    saveBodyUnitMode(next);
+    setUnitMode(next);
+  }
+
+  function getHeightCm(): number | null {
+    if (unitMode === "metric") {
+      const h = parseFloat(heightCm);
+      return Number.isFinite(h) && h > 0 ? h : null;
+    }
+    const f = parseFloat(ft);
+    const i = parseFloat(inch);
+    if (!Number.isFinite(f) || !Number.isFinite(i)) return null;
+    const cm = cmFromFtIn(f, i);
+    return Number.isFinite(cm) && cm > 0 ? cm : null;
+  }
+
+  function getWeightKg(): number | null {
+    const w = parseFloat(weightInput);
+    if (!Number.isFinite(w) || w <= 0) return null;
+    const kg = unitMode === "metric" ? w : kgFromLb(w);
+    return Math.round(kg * 100) / 100;
+  }
+
   function computedBmi(): number | null {
-    const h = useMetric
-      ? parseFloat(heightCm)
-      : cmFromFtIn(parseInt(ft, 10) || 0, parseInt(inch, 10) || 0);
-    const w = parseFloat(weightKg);
-    if (!Number.isFinite(h) || !Number.isFinite(w) || h <= 0 || w <= 0) return null;
+    const h = getHeightCm();
+    const w = getWeightKg();
+    if (h == null || w == null) return null;
     const m = h / 100;
     return Math.round((w / (m * m)) * 10) / 10;
   }
@@ -86,16 +150,16 @@ export default function InputPage() {
     setError(null);
     setBusy(true);
     try {
-      const h = useMetric
-        ? parseFloat(heightCm)
-        : cmFromFtIn(parseInt(ft, 10) || 0, parseInt(inch, 10) || 0);
-      const w = parseFloat(weightKg);
+      const h = getHeightCm();
+      const w = getWeightKg();
       const a = parseInt(age, 10);
+      const bmi =
+        h != null && w != null ? Math.round((w / (h / 100) ** 2) * 10) / 10 : null;
       const body = {
         age: Number.isFinite(a) ? a : null,
-        heightCm: Number.isFinite(h) ? h : null,
-        weightKg: Number.isFinite(w) ? w : null,
-        bmi: computedBmi(),
+        heightCm: h,
+        weightKg: w,
+        bmi,
         sleepRating,
         cognitiveRating,
         digestiveRating,
@@ -119,6 +183,7 @@ export default function InputPage() {
   }
 
   const bmiPreview = computedBmi();
+  const metric = unitMode === "metric";
 
   return (
     <div className="cp-page">
@@ -132,6 +197,16 @@ export default function InputPage() {
       <form className="cp-form cp-form--wide" onSubmit={(e) => void onSubmit(e)}>
         <fieldset className="cp-form__fieldset">
           <legend className="cp-form__legend">Body metrics</legend>
+          <div className="cp-form__unit-row">
+            <span className="cp-form__unit-label" id="input-body-units-label">
+              Units
+            </span>
+            <BodyUnitToggleBar
+              mode={unitMode}
+              onChange={handleUnitModeChange}
+              labelledBy="input-body-units-label"
+            />
+          </div>
           <div className="cp-form__row">
             <label className="cp-form__label">
               Age
@@ -146,27 +221,19 @@ export default function InputPage() {
               />
             </label>
             <label className="cp-form__label">
-              Weight (kg)
+              {metric ? "Weight (kg)" : "Weight (lb)"}
               <input
                 className="cp-form__input"
                 type="number"
                 step="0.1"
-                min={1}
-                value={weightKg}
-                onChange={(e) => setWeightKg(e.target.value)}
-                placeholder="e.g. 72"
+                min={metric ? 1 : 2}
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+                placeholder={metric ? "e.g. 72" : "e.g. 160"}
               />
             </label>
           </div>
-          <label className="cp-form__check">
-            <input
-              type="checkbox"
-              checked={useMetric}
-              onChange={(e) => setUseMetric(e.target.checked)}
-            />
-            Use centimeters for height
-          </label>
-          {useMetric ? (
+          {metric ? (
             <label className="cp-form__label">
               Height (cm)
               <input
@@ -186,6 +253,7 @@ export default function InputPage() {
                 <input
                   className="cp-form__input"
                   type="number"
+                  step="1"
                   min={3}
                   max={8}
                   value={ft}
@@ -197,8 +265,9 @@ export default function InputPage() {
                 <input
                   className="cp-form__input"
                   type="number"
+                  step="0.1"
                   min={0}
-                  max={11}
+                  max={11.99}
                   value={inch}
                   onChange={(e) => setInch(e.target.value)}
                 />

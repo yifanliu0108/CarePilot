@@ -3,6 +3,7 @@
   "assist": "POST /api/journey/assist with JSON body { \"message\": \"...\" }",
   "cloudStatus": "GET http://localhost:3001/api/journey/cloud-status — { \"configured\": true/false }",
   "cloudStart": "POST http://localhost:3001/api/journey/cloud-task with { \"task\": \"natural language task\" }",
+  "cloudGrocery": "POST /api/journey/cloud-task with { \"grocery\": { \"userMessage\": \"...\", \"nutritionSummary\": \"...\", \"priceCheckItems\": [\"kiwi\", \"tart cherry juice\"] } } — builds Walmart/Vons/Ralphs price task",
   "cloudPoll": "GET http://localhost:3001/api/journey/cloud-task/SESSION_UUID",
   "endpoint": "http://localhost:3001/api/journey/assist",
   "samples": [

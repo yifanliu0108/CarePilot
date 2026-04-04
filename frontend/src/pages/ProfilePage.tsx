@@ -1,5 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { BodyUnitToggleBar } from "../components/BodyUnitToggleBar";
 import { useSession } from "../context/SessionContext";
+import {
+  formatHeightDisplay,
+  formatWeightDisplay,
+  loadBodyUnitMode,
+  saveBodyUnitMode,
+  type BodyUnitMode,
+} from "../lib/bodyUnits";
 
 function field(label: string, value: string | number | null) {
   const display =
@@ -29,6 +38,8 @@ function ratingField(label: string, r: number | null | undefined) {
 
 export default function ProfilePage() {
   const { me } = useSession();
+  const [unitMode, setUnitMode] = useState<BodyUnitMode>(() => loadBodyUnitMode());
+
   if (!me) {
     return (
       <div className="cp-page">
@@ -37,6 +48,11 @@ export default function ProfilePage() {
     );
   }
   const p = me.profile;
+
+  function onUnitChange(mode: BodyUnitMode) {
+    saveBodyUnitMode(mode);
+    setUnitMode(mode);
+  }
 
   return (
     <div className="cp-page">
@@ -51,11 +67,23 @@ export default function ProfilePage() {
       </header>
 
       <section className="cp-card">
-        <h2 className="cp-card__title">Basics</h2>
+        <div className="cp-card__title-row">
+          <h2 className="cp-card__title">Basics</h2>
+          <div className="cp-card__toggle-wrap">
+            <span className="cp-form__unit-label" id="profile-body-units-label">
+              Units
+            </span>
+            <BodyUnitToggleBar
+              mode={unitMode}
+              onChange={onUnitChange}
+              labelledBy="profile-body-units-label"
+            />
+          </div>
+        </div>
         <dl className="cp-dl">
           {field("Age", p.age)}
-          {field("Height (cm)", p.heightCm)}
-          {field("Weight (kg)", p.weightKg)}
+          {field("Height", formatHeightDisplay(p.heightCm, unitMode))}
+          {field("Weight", formatWeightDisplay(p.weightKg, unitMode))}
           {field("BMI", p.bmi)}
         </dl>
       </section>

@@ -9,6 +9,12 @@ const CATEGORIES = {
   sleep: {
     keywords: /\b(sleep|insomnia|rest|recovery|fatigue|tired|circadian)\b/,
     task: "Research sleep-supporting foods and meal timing",
+    priceCheckItems: [
+      "tart cherry juice",
+      "fresh kiwi",
+      "pumpkin seeds",
+      "chamomile tea caffeine free",
+    ],
     assistantLead:
       "For sleep and recovery, many people focus on steady blood sugar, magnesium-rich foods, and avoiding heavy late meals. This is general wellness information—not a substitute for medical care.",
     foods:
@@ -26,6 +32,12 @@ const CATEGORIES = {
   cognitive: {
     keywords: /\b(focus|brain|memory|cognitive|concentration|mental|fog)\b/,
     task: "Find foods associated with focus and cognitive wellness",
+    priceCheckItems: [
+      "wild salmon fillet",
+      "walnuts",
+      "blueberries fresh",
+      "old fashioned oats",
+    ],
     assistantLead:
       "For focus and cognitive wellness, balanced meals with omega-3s, antioxidants, and steady hydration are common themes in public nutrition guidance.",
     foods:
@@ -43,6 +55,12 @@ const CATEGORIES = {
   digestive: {
     keywords: /\b(gut|digest|bloat|ibs|stomach|constipation|nausea)\b/,
     task: "Explore gentle, fiber-aware eating patterns",
+    priceCheckItems: [
+      "rolled oats",
+      "plain greek yogurt",
+      "ginger tea",
+      "bananas",
+    ],
     assistantLead:
       "Digestive comfort often improves with fiber gradualism, hydration, and identifying personal triggers. See a clinician for persistent symptoms.",
     foods:
@@ -60,6 +78,12 @@ const CATEGORIES = {
   musculoskeletal: {
     keywords: /\b(joint|muscle|pain|back|neck|arthritis|bone|inflammation)\b/,
     task: "Look up anti-inflammatory eating patterns (general)",
+    priceCheckItems: [
+      "extra virgin olive oil",
+      "mixed berries frozen",
+      "canned tuna in water",
+      "baby spinach",
+    ],
     assistantLead:
       "Musculoskeletal comfort is multifactorial. Mediterranean-style patterns are often cited in public health messaging for overall inflammatory balance.",
     foods:
@@ -77,6 +101,12 @@ const CATEGORIES = {
   immune: {
     keywords: /\b(immune|cold|infection|sick|illness|defense)\b/,
     task: "Review diet patterns that support general immune health",
+    priceCheckItems: [
+      "oranges navel",
+      "broccoli crowns",
+      "almonds",
+      "plain kefir",
+    ],
     assistantLead:
       "No single food prevents illness. Adequate protein, micronutrients from varied plants, sleep, and vaccines (per your clinician) matter most.",
     foods:
@@ -94,6 +124,12 @@ const CATEGORIES = {
   subhealth: {
     keywords: /\b(subhealth|sub-health|wellness|general|overall|feel off|not sick)\b/,
     task: "Build a balanced plate for subhealth / general wellness",
+    priceCheckItems: [
+      "boneless chicken breast",
+      "brown rice",
+      "mixed salad greens",
+      "black beans canned",
+    ],
     assistantLead:
       "Subhealth usually means feeling run-down without a clear diagnosis. A steady pattern—protein, fiber, plants, hydration, and sleep—creates a strong baseline.",
     foods:
@@ -178,8 +214,9 @@ export function nutritionAssist(message, profile = null) {
       task: def.task,
       steps: def.steps,
       actions: def.actions,
+      priceCheckItems: def.priceCheckItems ?? [],
       note:
-        "Mock Browser Use plan: open links or run Browser Use Cloud to automate research in a real browser. Not medical advice.",
+        "Run “Browser Use Cloud” to search Walmart, Vons, and Ralphs for the items above (prices are best-effort; sites may block bots). Not medical advice.",
     },
   };
 }

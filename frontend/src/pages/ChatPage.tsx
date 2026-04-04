@@ -50,7 +50,34 @@ type BrowserSession = {
   steps: BrowserStep[];
   actions: BrowserAction[];
   note?: string;
+  priceCheckItems?: string[];
 };
+
+type GroceryPriceRow = { store: string; product: string; price: string; productUrl?: string };
+type GroceryPriceItem = { query: string; results: GroceryPriceRow[] };
+
+function parseGroceryCloudOutput(output: unknown): { items: GroceryPriceItem[] } | null {
+  if (output == null) return null;
+  if (typeof output === "object" && output !== null) {
+    const o = output as { items?: unknown };
+    if (Array.isArray(o.items) && o.items.length > 0) {
+      return { items: o.items as GroceryPriceItem[] };
+    }
+  }
+  if (typeof output !== "string") return null;
+  let raw = output
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/m, "")
+    .trim();
+  try {
+    const j = JSON.parse(raw) as { items?: GroceryPriceItem[] };
+    if (j && Array.isArray(j.items) && j.items.length > 0) return { items: j.items };
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 function taskFromLivePlan(live: BrowserSession, lastUserMessage: string) {
   const stepLine = live.steps.map((s) => s.description).join(" ");
@@ -67,13 +94,61 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function CloudTaskOutput({ output, status }: { output: unknown; status: string }) {
+  if (output == null || cloudStatusStillRunning(status)) return null;
+  const parsed = parseGroceryCloudOutput(output);
+  if (parsed) {
+    return (
+      <div className="cp-live__grocery">
+        <p className="cp-live__grocery-title">Grocery price snapshot</p>
+        {parsed.items.map((row) => (
+          <div key={row.query} className="cp-live__grocery-block">
+            <p className="cp-live__grocery-query">{row.query}</p>
+            <table className="cp-live__grocery-table">
+              <thead>
+                <tr>
+                  <th scope="col">Store</th>
+                  <th scope="col">Product</th>
+                  <th scope="col">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(row.results ?? []).map((r, i) => (
+                  <tr key={`${row.query}-${r.store}-${i}`}>
+                    <td>{r.store}</td>
+                    <td>
+                      {r.productUrl ? (
+                        <a href={r.productUrl} target="_blank" rel="noreferrer">
+                          {r.product || "—"}
+                        </a>
+                      ) : (
+                        (r.product ?? "—")
+                      )}
+                    </td>
+                    <td>{r.price ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <pre className="cp-live__output">
+      {typeof output === "string" ? output : JSON.stringify(output, null, 2)}
+    </pre>
+  );
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
       text:
-        "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. The Live actions panel shows browser-style steps; with BROWSER_USE_API_KEY on the server you can run a real agent on Browser Use Cloud and watch the live browser here.",
+        "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. With BROWSER_USE_API_KEY on the server, use “Check grocery prices” to run Browser Use Cloud on Walmart, Vons, and Ralphs—results may be incomplete if sites block automation.",
     },
   ]);
   const [draft, setDraft] = useState("");
@@ -123,10 +198,20 @@ export default function ChatPage() {
     setCloudActive(true);
     setCloudSession(null);
     try {
-      const task = taskFromLivePlan(live, lastPatientMessageRef.current);
+      const items = live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ?? [];
+      const body =
+        items.length > 0
+          ? JSON.stringify({
+              grocery: {
+                userMessage: lastPatientMessageRef.current,
+                priceCheckItems: items,
+                nutritionSummary: live.task,
+              },
+            })
+          : JSON.stringify({ task: taskFromLivePlan(live, lastPatientMessageRef.current) });
       const res = await apiFetch("/api/journey/cloud-task", {
         method: "POST",
-        body: JSON.stringify({ task }),
+        body,
       });
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
         error?: string;
@@ -224,7 +309,7 @@ export default function ChatPage() {
         <header className="cp-chat__head">
           <h1 className="cp-chat__title">Food &amp; subhealth chat</h1>
           <p className="cp-chat__sub">
-            Mock Browser Use plan + optional Browser Use Cloud (API key on server)
+            Nutrition plan + optional grocery price check on Browser Use Cloud
           </p>
         </header>
         <div className="cp-chat__messages" ref={listRef} role="log" aria-live="polite">
@@ -331,14 +416,15 @@ export default function ChatPage() {
                     disabled={cloudActive}
                     onClick={() => void startCloudTask()}
                   >
-                    {cloudActive ? "Cloud agent running…" : "Run on Browser Use Cloud"}
+                    {cloudActive ? "Cloud agent running…" : "Check grocery prices"}
                   </button>
                   <p className="cp-live__hint cp-live__hint--tight">
                     Uses{" "}
                     <a href="https://cloud.browser-use.com/" target="_blank" rel="noreferrer">
                       Browser Use Cloud
                     </a>{" "}
-                    (your balance). Task is built from this plan + last message.
+                    (your balance). Searches Walmart, Vons, and Ralphs for the suggested items; prices
+                    are indicative only.
                   </p>
                 </div>
               ) : null}
@@ -388,13 +474,7 @@ export default function ChatPage() {
                   />
                 </>
               ) : null}
-              {cloudSession.output != null && !cloudStatusStillRunning(cloudSession.status) ? (
-                <pre className="cp-live__output">
-                  {typeof cloudSession.output === "string"
-                    ? cloudSession.output
-                    : JSON.stringify(cloudSession.output, null, 2)}
-                </pre>
-              ) : null}
+              <CloudTaskOutput output={cloudSession.output} status={cloudSession.status} />
             </div>
           ) : null}
         </div>
