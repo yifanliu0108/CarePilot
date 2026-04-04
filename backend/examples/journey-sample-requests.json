@@ -1,0 +1,33 @@
+{
+  "description": "Local API examples. Browser Use Cloud: get a key at https://cloud.browser-use.com/settings (API keys), set BROWSER_USE_API_KEY in backend .env. Docs: https://docs.cloud.browser-use.com/cloud/api-reference",
+  "assist": "POST /api/journey/assist with JSON body { \"message\": \"...\" }",
+  "cloudStatus": "GET http://localhost:3001/api/journey/cloud-status — { \"configured\": true/false }",
+  "cloudStart": "POST http://localhost:3001/api/journey/cloud-task with { \"task\": \"natural language task\" }",
+  "cloudPoll": "GET http://localhost:3001/api/journey/cloud-task/SESSION_UUID",
+  "endpoint": "http://localhost:3001/api/journey/assist",
+  "samples": [
+    {
+      "message": "I think I need the ER — where is the closest hospital?",
+      "expectIntent": "care_search",
+      "expectInResponse": ["browserSession", "assistantText", "steps", "actions"]
+    },
+    {
+      "message": "Can you help me book a primary care visit next week?",
+      "expectIntent": "scheduling"
+    },
+    {
+      "message": "Does my plan cover physical therapy?",
+      "expectIntent": "insurance"
+    },
+    {
+      "message": "I need a refill on my blood pressure medication",
+      "expectIntent": "pharmacy"
+    },
+    {
+      "message": "Hi",
+      "expectIntent": "general"
+    }
+  ],
+  "curlAssist": "curl -s -X POST http://localhost:3001/api/journey/assist -H 'Content-Type: application/json' -d '{\"message\":\"Find urgent care near me\"}' | jq .",
+  "curlCloud": "curl -s -X POST https://api.browser-use.com/api/v3/sessions -H \"X-Browser-Use-API-Key: $BROWSER_USE_API_KEY\" -H 'Content-Type: application/json' -d '{\"task\":\"Open Google Maps and search for hospitals\"}' | jq ."
+}

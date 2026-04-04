@@ -1,0 +1,17 @@
+{
+  "name": "carepilot",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "dev:web": "npm run dev -w frontend",
+    "dev:api": "npm run dev -w backend",
+    "build": "npm run build -w frontend",
+    "lint": "npm run lint -w frontend",
+    "test": "npm run test -w backend",
+    "preview": "npm run preview -w frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
