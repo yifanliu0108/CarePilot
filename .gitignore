@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Secrets (local only; never commit API keys)
+.env
+.env.*
+!.env.example
+
+# Local editor history backups
+.history/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

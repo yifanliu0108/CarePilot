@@ -1,4 +1,12 @@
-import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// npm run dev from repo root uses cwd = monorepo root; load backend/.env explicitly.
+dotenv.config({ path: path.join(__dirname, "../../.env") });
+dotenv.config({ path: path.join(__dirname, "../.env"), override: true });
+
 import cors from "cors";
 import express from "express";
 import {
@@ -116,6 +124,11 @@ app.get("/api/journey/cloud-status", (_req, res) => {
   res.json({ configured: cloudConfigured() });
 });
 
+/** Whether Gemini API key is set (never expose the key to the client). */
+app.get("/api/journey/gemini-status", (_req, res) => {
+  res.json({ configured: geminiConfigured() });
+});
+
 /**
  * Start a task on Browser Use Cloud (https://cloud.browser-use.com/).
  * Body: { task: string, model?: string } — or —
@@ -167,10 +180,11 @@ app.get("/api/journey/cloud-task/:sessionId", async (req, res) => {
 });
 
 /**
- * Nutrition chat + structured Browser Use–style payload.
- * Body: { message: string, sessionId?: string, mode?: "nutrition" | "care" }
+ * Journey assist: nutrition (default) or care navigation.
+ * Body: { message, mode?: "nutrition" | "care", history?, sessionId? }
+ * — care + GEMINI_API_KEY uses Gemini with optional chat history; else mock planner.
  */
-app.post("/api/journey/assist", (req, res) => {
+app.post("/api/journey/assist", async (req, res) => {
   const message = req.body?.message;
   if (typeof message !== "string" || !message.trim()) {
     res.status(400).json({ error: "body.message (non-empty string) required" });
@@ -181,14 +195,66 @@ app.post("/api/journey/assist", (req, res) => {
   const session = sid ? getSession(sid) : null;
   const profile = session?.profile ?? null;
 
-  const plan =
-    mode === "care"
-      ? planFromPatientMessage(message)
-      : nutritionAssist(message, profile);
+  /** @type {Array<{ role: string, text: string }>} */
+  let history = [];
+  const raw = req.body?.history;
+  if (Array.isArray(raw)) {
+    history = raw
+      .filter((h) => h && typeof h.text === "string" && h.text.trim())
+      .map((h) => ({
+        role: h.role === "assistant" ? "assistant" : "user",
+        text: h.text.trim(),
+      }));
+  }
 
-  res.json(plan);
+  try {
+    if (mode === "care") {
+      if (geminiConfigured()) {
+        try {
+          const plan = await assistWithGemini(message, history);
+          res.json(plan);
+          return;
+        } catch (e) {
+          console.error("Gemini assist failed:", e?.message ?? e);
+          res.status(503).json({
+            error: e?.message ?? "Gemini request failed",
+            detail:
+              "Fix the API key/model or try again; mock planner is not used when GEMINI_API_KEY is set.",
+          });
+          return;
+        }
+      }
+      const plan = planFromPatientMessage(message);
+      res.json(plan);
+      return;
+    }
+    if (geminiConfigured()) {
+      try {
+        const plan = await assistWithGeminiNutrition(message, history, profile);
+        res.json(plan);
+        return;
+      } catch (e) {
+        console.error("Gemini nutrition assist failed:", e?.message ?? e);
+        res.status(503).json({
+          error: e?.message ?? "Gemini request failed",
+          detail:
+            "Fix the API key/model or try again; mock nutrition planner is not used when GEMINI_API_KEY is set.",
+        });
+        return;
+      }
+    }
+    const plan = nutritionAssist(message, profile);
+    res.json(plan);
+  } catch (e) {
+    res.status(500).json({ error: e?.message ?? "Assist failed" });
+  }
 });
 
 app.listen(PORT, () => {
   console.log(`CarePilot API listening on http://localhost:${PORT}`);
+  console.log(
+    geminiConfigured()
+      ? "Gemini: enabled (GEMINI_API_KEY loaded)"
+      : "Gemini: disabled — copy backend/.env.example to backend/.env and set GEMINI_API_KEY",
+  );
 });

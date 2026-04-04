@@ -156,6 +156,7 @@ export default function ChatPage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [cloudConfigured, setCloudConfigured] = useState(false);
+  const [geminiConfigured, setGeminiConfigured] = useState(false);
   const [cloudSession, setCloudSession] = useState<CloudSessionView | null>(null);
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -172,6 +173,10 @@ export default function ChatPage() {
       .then((r) => r.json())
       .then((d: { configured?: boolean }) => setCloudConfigured(Boolean(d.configured)))
       .catch(() => setCloudConfigured(false));
+    void apiFetch("/api/journey/gemini-status")
+      .then((r) => r.json())
+      .then((d: { configured?: boolean }) => setGeminiConfigured(Boolean(d.configured)))
+      .catch(() => setGeminiConfigured(false));
   }, []);
 
   useEffect(
@@ -260,6 +265,11 @@ export default function ChatPage() {
     if (!text) return;
     setDraft("");
     lastPatientMessageRef.current = text;
+
+    const history = messages
+      .filter((m) => m.id !== "welcome")
+      .map((m) => ({ role: m.role, text: m.text }));
+
     setMessages((m) => [...m, { id: makeId(), role: "user", text }]);
     setLiveLoading(true);
     setLiveError(null);
@@ -270,7 +280,7 @@ export default function ChatPage() {
     try {
       const res = await apiFetch("/api/journey/assist", {
         method: "POST",
-        body: JSON.stringify({ message: text, mode: "nutrition" }),
+        body: JSON.stringify({ message: text, mode: "nutrition", history }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

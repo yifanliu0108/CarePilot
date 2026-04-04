@@ -66,7 +66,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         return;
       }
-      const data = (await r.json()) as Me;
+      const text = await r.text();
+      if (!text?.trim()) {
+        setMe(null);
+        return;
+      }
+      const data = JSON.parse(text) as Me;
       setMe(data);
     } catch {
       setMe(null);
@@ -85,9 +90,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, email }),
     });
-    const data = (await r.json()) as { sessionId?: string; error?: string };
-    if (!r.ok) throw new Error(data.error ?? "Login failed");
-    if (!data.sessionId) throw new Error("No session from server");
+    const text = await r.text();
+    let data: { sessionId?: string; error?: string } = {};
+    if (text?.trim()) {
+      try {
+        data = JSON.parse(text) as { sessionId?: string; error?: string };
+      } catch {
+        throw new Error(
+          `Bad response from server (${r.status}). Start the backend so it listens on port 3001 (e.g. npm run dev from the repo root).`,
+        );
+      }
+    }
+    if (!r.ok) {
+      throw new Error(
+        data.error ??
+          (r.status === 502 || r.status === 504
+            ? "Cannot reach the API. Run the backend on port 3001 (npm run dev)."
+            : `Login failed (${r.status})`),
+      );
+    }
+    if (!data.sessionId) {
+      throw new Error(
+        "No session from server. Is the API running? Empty responses usually mean the backend is not up.",
+      );
+    }
     setStoredSessionId(data.sessionId);
     setSessionId(data.sessionId);
     await refreshMe();
