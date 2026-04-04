@@ -72,7 +72,7 @@ export default function JourneyPage() {
     {
       id: 'welcome',
       role: 'assistant',
-      text: 'Hi—I am your CarePilot assistant. Ask about hospitals, scheduling, insurance, or prescriptions. The Live actions panel shows next steps; with a Cloud API key you can run the real agent on Browser Use Cloud.',
+      text: 'Hi—CarePilot can help you find care, schedule visits, check insurance basics, or pharmacy steps. Use Live actions for suggested links and optional Browser Use Cloud when your server has an API key.',
     },
   ])
   const [draft, setDraft] = useState('')
@@ -175,6 +175,11 @@ export default function JourneyPage() {
     if (!text) return
     setDraft('')
     lastPatientMessageRef.current = text
+
+    const history = messages
+      .filter((m) => m.id !== 'welcome')
+      .map((m) => ({ role: m.role, text: m.text }))
+
     setMessages((m) => [...m, { id: makeId(), role: 'user', text }])
     setLiveLoading(true)
     setLiveError(null)
@@ -186,7 +191,7 @@ export default function JourneyPage() {
       const res = await fetch('/api/journey/assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, history }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -211,7 +216,7 @@ export default function JourneyPage() {
         {
           id: makeId(),
           role: 'assistant',
-          text: `Could not reach the care planner (${msg}). Is the API running on port 3001?`,
+          text: `Could not reach the care planner (${msg}). Check that the API is running on port 3001 and that Gemini is configured if you use it.`,
         },
       ])
     } finally {
