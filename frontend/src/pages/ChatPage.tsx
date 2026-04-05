@@ -145,7 +145,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles/joints, or immune support. Describe your symptoms or use your profile. When you get a plan, select actions in the sidebar and tap Run selected—a formatted browser summary appears in this chat. With GOOGLE_MAPS_API_KEY on the server, you can find nearby grocery stores and care facilities directly (sidebar). Grocery price checks still use Browser Use on retailer sites; we pass nearby store names from Maps to focus those runs. Add BROWSER_USE_API_KEY for cloud browser tasks.";
+  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles and joints, or immune support. Say what's going on or rely on your saved health snapshot—both help tailor ideas. When you get a plan, use the panel on the right: check the steps you want, then tap Run selected. Summaries and follow-ups land here in the chat, and you can open quick links from any message whenever you like.";
 
 export default function ChatPage() {
   const location = useLocation();
