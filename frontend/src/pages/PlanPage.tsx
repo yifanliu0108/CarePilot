@@ -124,7 +124,9 @@ export default function PlanPage() {
   if (loading) {
     return (
       <div className="cp-page">
-        <p className="cp-page__sub">Loading meal plan…</p>
+        <div className="cp-page__inner">
+          <p className="cp-page__sub">Loading meal plan…</p>
+        </div>
       </div>
     );
   }
@@ -132,12 +134,14 @@ export default function PlanPage() {
   if (error || !plan) {
     return (
       <div className="cp-page">
-        <p className="cp-form__error" role="alert">
-          {error ?? "No plan"}
-        </p>
-        <Link to="/input" className="cp-inline-link">
-          Complete your profile
-        </Link>
+        <div className="cp-page__inner">
+          <p className="cp-form__error" role="alert">
+            {error ?? "No plan"}
+          </p>
+          <Link to="/input" className="cp-inline-link">
+            Complete your profile
+          </Link>
+        </div>
       </div>
     );
   }
@@ -146,6 +150,7 @@ export default function PlanPage() {
 
   return (
     <div className="cp-page">
+      <div className="cp-page__inner">
       <header className="cp-page__head">
         <h1 className="cp-page__title">Daily meal plan</h1>
         <p className="cp-page__sub">
@@ -209,6 +214,7 @@ export default function PlanPage() {
           Discuss in chat
         </Link>
       </section>
+      </div>
     </div>
   );
 }
