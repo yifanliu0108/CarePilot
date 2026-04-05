@@ -19,7 +19,12 @@ npm workspaces install dependencies for both packages (hoisted under the root `n
 
 ### Backend environment (optional)
 
-Copy `backend/.env.example` to **`backend/.env`** and set `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/apikey). The server loads **`backend/.env`** even when you run `npm run dev` from the repo root (you can alternatively use a `.env` at the repo root). Without a key, `POST /api/journey/assist` uses the built-in mock planner (`mock` in Live actions). For Browser Use Cloud, set `BROWSER_USE_API_KEY` (see `backend/.env.example`).
+Copy `backend/.env.example` to **`backend/.env`** and set:
+
+- **`GEMINI_API_KEY`** — [Google AI Studio](https://aistudio.google.com/apikey). Without it, chat uses mock planners (`mock` in Live actions).
+- **`BROWSER_USE_API_KEY`** (optional) — [Browser Use Cloud → Settings → API keys](https://cloud.browser-use.com/settings). Powers **Live actions** / grocery automation via the [REST v2 tasks API](https://docs.browser-use.com/cloud/api-v2-overview) (`/api/v2/tasks`). Alias: **`BROWSER_USE_CLOUD_API_KEY`**. Optional tuning: **`BROWSER_USE_LLM`**, **`BROWSER_USE_FLASH_MODE`** — see `backend/.env.example`.
+
+The server loads **`backend/.env`** when you run from the repo root (or a **`.env`** at the repo root). **`GET /api/health`** returns **`geminiConfigured`** and **`browserUseConfigured`** booleans (never the secrets). After editing `.env`, restart `npm run dev`.
 
 ## Dev
 

@@ -1,6 +1,6 @@
 import type { BrowserSession } from "./journeyTypes";
 import type { RecommendationAction } from "./types";
-import { parseAssistantLists } from "./types";
+import { parseFoodBullets } from "./types";
 
 export function buildRecommendationActions(
   assistantText: string,
@@ -17,7 +17,7 @@ export function buildRecommendationActions(
       });
     }
   } else {
-    const { foodsToTry } = parseAssistantLists(assistantText, null);
+    const foodsToTry = parseFoodBullets(assistantText);
     foodsToTry.forEach((label, i) => {
       actions.push({ id: `task-${i}-${label.slice(0, 12)}`, label, type: "task" });
     });

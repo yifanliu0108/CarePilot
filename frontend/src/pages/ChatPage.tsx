@@ -5,6 +5,7 @@ import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
 import type { BrowserSession, CloudSessionView } from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
+import { titleForResourceLinks } from "../components/chat/resourceLinks";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
 import { assistantMessageFromApi } from "../components/chat/types";
@@ -292,7 +293,7 @@ export default function ChatPage() {
         {live && live.actions.length > 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-              Quick links
+              {titleForResourceLinks(live.actions.map((a) => a.url))}
             </p>
             <div className="flex flex-col gap-1.5">
               {live.actions.map((a) => (

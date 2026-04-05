@@ -1,4 +1,5 @@
 import { SmartButton } from "./SmartButton";
+import { titleForResourceLinks } from "./resourceLinks";
 import type { AssistantChatMessage, UserChatMessage } from "./types";
 
 function introFromAssistantText(text: string) {
@@ -47,8 +48,11 @@ export function MessageCard(props: MessageCardProps) {
   const { message, showGroceryButton, onCheckGroceryPrices, groceryLoading } = props;
   const intro = introFromAssistantText(message.text);
   const hasFoods = message.foodsToTry.length > 0;
-  const hasStores = message.nearbyStores.length > 0;
-  const showStructured = hasFoods || hasStores;
+  const hasResources = message.resourceLinks.length > 0;
+  const resourceSectionTitle = hasResources
+    ? titleForResourceLinks(message.resourceLinks.map((r) => r.url))
+    : "";
+  const showStructured = hasFoods || hasResources;
   const showGroceryBtn = showGroceryButton && onCheckGroceryPrices;
 
   return (
@@ -85,19 +89,22 @@ export function MessageCard(props: MessageCardProps) {
           </section>
         ) : null}
 
-        {hasStores ? (
+        {hasResources ? (
           <section className="mt-4">
             <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-sky-700">
-              Nearby stores
+              {resourceSectionTitle}
             </h4>
             <ul className="space-y-1.5 text-sm text-slate-700">
-              {message.nearbyStores.map((item) => (
-                <li
-                  key={item}
-                  className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5"
-                >
-                  <span aria-hidden>📍</span>
-                  {item}
+              {message.resourceLinks.map((link) => (
+                <li key={link.url} className="rounded-lg bg-slate-50 px-2.5 py-1.5">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-sky-800 underline-offset-2 hover:underline"
+                  >
+                    {link.label}
+                  </a>
                 </li>
               ))}
             </ul>

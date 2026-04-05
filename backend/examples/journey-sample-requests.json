@@ -1,10 +1,10 @@
 {
-  "description": "Local API examples. Browser Use Cloud: get a key at https://cloud.browser-use.com/settings (API keys), set BROWSER_USE_API_KEY in backend .env. Docs: https://docs.cloud.browser-use.com/cloud/api-reference",
+  "description": "Local API examples. Browser Use Cloud v2: get a key at https://cloud.browser-use.com/settings (API keys), set BROWSER_USE_API_KEY in backend .env. Docs: https://docs.browser-use.com/cloud/api-v2-overview",
   "assist": "POST /api/journey/assist with JSON body { \"message\": \"...\" }",
   "cloudStatus": "GET http://localhost:3001/api/journey/cloud-status — { \"configured\": true/false }",
   "cloudStart": "POST http://localhost:3001/api/journey/cloud-task with { \"task\": \"natural language task\" }",
   "cloudGrocery": "POST /api/journey/cloud-task with { \"grocery\": { \"userMessage\": \"...\", \"nutritionSummary\": \"...\", \"priceCheckItems\": [\"kiwi\", \"tart cherry juice\"] } } — builds Walmart/Vons/Ralphs price task",
-  "cloudPoll": "GET http://localhost:3001/api/journey/cloud-task/SESSION_UUID",
+  "cloudPoll": "GET http://localhost:3001/api/journey/cloud-task/TASK_ID",
   "endpoint": "http://localhost:3001/api/journey/assist",
   "samples": [
     {
@@ -30,5 +30,5 @@
     }
   ],
   "curlAssist": "curl -s -X POST http://localhost:3001/api/journey/assist -H 'Content-Type: application/json' -d '{\"message\":\"Find urgent care near me\"}' | jq .",
-  "curlCloud": "curl -s -X POST https://api.browser-use.com/api/v3/sessions -H \"X-Browser-Use-API-Key: $BROWSER_USE_API_KEY\" -H 'Content-Type: application/json' -d '{\"task\":\"Open Google Maps and search for hospitals\"}' | jq ."
+  "curlCloud": "curl -s -X POST https://api.browser-use.com/api/v2/tasks -H \"X-Browser-Use-API-Key: $BROWSER_USE_API_KEY\" -H 'Content-Type: application/json' -d '{\"task\":\"Open Google Maps and search for hospitals\",\"flash_mode\":true}' | jq ."
 }

@@ -33,7 +33,8 @@ export function RecommendationPanel({
           Recommendation
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          Check items off as you go. Browser tasks run only when you tap Run.
+          Links in the chat open instantly. Browser Use runs only when you tap Run and can take a minute
+          or more — use it when you want live price checks.
         </p>
         {liveSummary ? <div className="mt-3 text-xs text-slate-600">{liveSummary}</div> : null}
       </div>

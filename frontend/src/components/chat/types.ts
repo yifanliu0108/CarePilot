@@ -1,5 +1,7 @@
 import type { BrowserSession } from "./journeyTypes";
 
+export type ResourceLink = { label: string; url: string };
+
 export type RecommendationAction = {
   id: string;
   label: string;
@@ -14,7 +16,8 @@ export type AssistantChatMessage = {
   role: "assistant";
   text: string;
   foodsToTry: string[];
-  nearbyStores: string[];
+  /** Curated links from the API (label + url). Section title comes from `titleForResourceLinks`. */
+  resourceLinks: ResourceLink[];
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -24,17 +27,22 @@ export function assistantMessageFromApi(
   assistantText: string,
   browserSession: BrowserSession | null | undefined,
 ): AssistantChatMessage {
-  const { foodsToTry, nearbyStores } = parseAssistantLists(assistantText, browserSession ?? null);
+  const foodsToTry = parseFoodBullets(assistantText);
+  const resourceLinks: ResourceLink[] =
+    browserSession?.actions
+      ?.filter((a) => typeof a.url === "string" && a.url.trim())
+      .map((a) => ({ label: a.label, url: a.url.trim() })) ?? [];
   return {
     id,
     role: "assistant",
     text: assistantText,
     foodsToTry,
-    nearbyStores,
+    resourceLinks,
   };
 }
 
-export function parseAssistantLists(text: string, live: BrowserSession | null) {
+/** Bullet list at start of assistant message → “Foods to try”. */
+export function parseFoodBullets(text: string) {
   const lines = text
     .split("\n")
     .map((l) => l.trim())
@@ -50,18 +58,5 @@ export function parseAssistantLists(text: string, live: BrowserSession | null) {
       break;
     }
   }
-  const nearbyStores =
-    live?.actions?.map((a) => {
-      const host = hostFromUrl(a.url);
-      return host ? `${a.label} · ${host}` : a.label;
-    }) ?? [];
-  return { foodsToTry, nearbyStores };
-}
-
-function hostFromUrl(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "";
-  }
+  return foodsToTry;
 }

@@ -41,7 +41,12 @@ function sessionIdFromReq(req) {
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "carepilot-backend" });
+  res.json({
+    ok: true,
+    service: "carepilot-backend",
+    geminiConfigured: geminiConfigured(),
+    browserUseConfigured: cloudConfigured(),
+  });
 });
 
 app.post("/api/auth/login", (req, res) => {
@@ -143,8 +148,8 @@ app.get("/api/journey/gemini-status", (_req, res) => {
 });
 
 /**
- * Start a task on Browser Use Cloud (https://cloud.browser-use.com/).
- * Body: { task: string, model?: string } — or —
+ * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
+ * Body: { task: string, model?: string } — maps to v2 `llm` — or —
  * { grocery: { userMessage?, priceCheckItems?, nutritionSummary? }, model?: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
@@ -272,6 +277,11 @@ const server = app.listen(PORT, () => {
     geminiConfigured()
       ? "Gemini: enabled (GEMINI_API_KEY loaded)"
       : "Gemini: disabled — copy backend/.env.example to backend/.env and set GEMINI_API_KEY",
+  );
+  console.log(
+    cloudConfigured()
+      ? "Browser Use Cloud: enabled (BROWSER_USE_API_KEY or BROWSER_USE_CLOUD_API_KEY)"
+      : "Browser Use Cloud: disabled — set BROWSER_USE_API_KEY in backend/.env (https://cloud.browser-use.com/settings)",
   );
 });
 
