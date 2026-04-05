@@ -582,7 +582,12 @@ export default function ChatPage() {
     }
   }
 
-  const liveSummary = live ? (
+  const browserUseRunning = cloudActive || cloudSession != null;
+  const browserUseReady =
+    !browserUseRunning && (!!live || actions.length > 0);
+  const browserPanelMinimal = !browserUseReady;
+
+  const liveSummary = browserPanelMinimal ? undefined : live ? (
     <p className="flex flex-wrap items-center gap-2">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
         <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
@@ -604,12 +609,17 @@ export default function ChatPage() {
       />
       Planning…
     </p>
+  ) : actions.length > 0 ? (
+    <p className="text-slate-500">
+      <strong>Run selected</strong> becomes available when the assistant returns a browser plan.
+      You can still review suggested steps below.
+    </p>
   ) : (
-    <p className="text-slate-500">Idle — chat to generate a plan.</p>
+    <p className="text-slate-500">Idle — send a message to get the next reply.</p>
   );
 
   return (
-    <div className="cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div className="cp-chat-layout cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
       <ChatWindow
         className="lg:min-w-0 lg:flex-[3] lg:max-w-none"
         listRef={listRef}
@@ -632,6 +642,9 @@ export default function ChatPage() {
         cloudActive={cloudActive}
       />
       <RecommendationPanel
+        minimal={browserPanelMinimal}
+        liveLoading={liveLoading}
+        liveError={liveError}
         actions={actions}
         checkedIds={checkedIds}
         onToggle={toggleChecked}
@@ -680,14 +693,6 @@ export default function ChatPage() {
             />
             <span className="font-medium">Connecting to Browser Use…</span>
           </div>
-        ) : null}
-        {liveError ? (
-          <p
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-            role="alert"
-          >
-            {liveError}
-          </p>
         ) : null}
         {live?.note ? (
           <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">

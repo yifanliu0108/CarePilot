@@ -197,15 +197,16 @@ export default function InputPage() {
   const weightKgMode = units.weight === "kg";
 
   return (
-    <div className="cp-page">
-      <header className="cp-page__head">
-        <h1 className="cp-page__title">Your health snapshot</h1>
-        <p className="cp-page__sub">
-          Basic metrics and subhealth focus (1–5) help tailor food ideas and your daily meal plan.
-        </p>
-      </header>
+    <div className="cp-page cp-page--input">
+      <div className="cp-page__inner">
+        <header className="cp-page__head">
+          <h1 className="cp-page__title">Your health snapshot</h1>
+          <p className="cp-page__sub">
+            Basic metrics and subhealth focus (1–5) help tailor food ideas and your daily meal plan.
+          </p>
+        </header>
 
-      <form className="cp-form cp-form--wide" onSubmit={(e) => void onSubmit(e)}>
+        <form className="cp-form cp-form--wide" onSubmit={(e) => void onSubmit(e)}>
         <fieldset className="cp-form__fieldset">
           <legend className="cp-form__legend">Body metrics</legend>
           <div className="cp-form__unit-row">
@@ -327,6 +328,7 @@ export default function InputPage() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

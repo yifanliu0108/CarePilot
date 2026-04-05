@@ -41,7 +41,7 @@ export function ChatWindow({
       className={`flex min-h-0 min-w-0 flex-1 flex-col border-b border-teal-900/10 bg-gradient-to-br from-[#c8dedc]/90 via-[#e8f4f2] to-[#f0f9f8] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] lg:border-b-0 lg:border-r lg:border-r-teal-900/12 ${className}`}
       aria-label="CarePilot chat"
     >
-      <header className="shrink-0 border-b border-teal-900/10 bg-white/40 px-4 py-4 backdrop-blur-sm sm:px-6">
+      <header className="shrink-0 border-b border-white/35 bg-[rgb(237_242_244/0.58)] px-4 py-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.6)] backdrop-blur-[22px] backdrop-saturate-[145%] sm:px-6">
         <h1 className="m-0">
           <Logo variant="compact" />
         </h1>

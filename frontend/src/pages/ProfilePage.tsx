@@ -45,7 +45,9 @@ export default function ProfilePage() {
   if (!me) {
     return (
       <div className="cp-page">
-        <p className="cp-page__sub">No profile loaded.</p>
+        <div className="cp-page__inner">
+          <p className="cp-page__sub">No profile loaded.</p>
+        </div>
       </div>
     );
   }
@@ -68,6 +70,7 @@ export default function ProfilePage() {
 
   return (
     <div className="cp-page">
+      <div className="cp-page__inner">
       <header className="cp-page__head">
         <h1 className="cp-page__title">Profile</h1>
         <p className="cp-page__sub">
@@ -112,6 +115,7 @@ export default function ProfilePage() {
           {ratingField("Immune", p.immuneRating)}
         </dl>
       </section>
+      </div>
     </div>
   );
 }

@@ -123,51 +123,43 @@ export default function PlanPage() {
 
   if (loading) {
     return (
-      <div className="cp-page">
-        <p className="cp-page__sub">Loading meal plan…</p>
+      <div className="cp-page cp-page--plan">
+        <div className="cp-page__inner">
+          <p className="cp-page__sub">Loading meal plan…</p>
+        </div>
       </div>
     );
   }
 
   if (error || !plan) {
     return (
-      <div className="cp-page">
-        <p className="cp-form__error" role="alert">
-          {error ?? "No plan"}
-        </p>
-        <Link to="/input" className="cp-inline-link">
-          Complete your profile
-        </Link>
+      <div className="cp-page cp-page--plan">
+        <div className="cp-page__inner">
+          <p className="cp-form__error" role="alert">
+            {error ?? "No plan"}
+          </p>
+          <Link to="/input" className="cp-inline-link">
+            Complete your profile
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const priority = plan.priorityOrder ?? plan.concerns;
   const snacks = plan.meals.snacks.map((s) => normalizeMealSlot(s));
 
   return (
-    <div className="cp-page">
+    <div className="cp-page cp-page--plan">
+      <div className="cp-page__inner">
       <header className="cp-page__head">
         <h1 className="cp-page__title">Daily meal plan</h1>
         <p className="cp-page__sub">
-          For {plan.date}. Uses your <strong>body metrics</strong> (age, BMI from height/weight) and{" "}
-          <strong>every subhealth rating 1–5</strong> in the scorer; areas at <strong>3+</strong> are highlighted
-          below. Hover a meal for <strong>Shop recipe</strong> to open chat with ingredients ready to send.
+          For {plan.date}. Uses your <strong>body metrics</strong> and <strong>subhealth ratings 1–5</strong> in
+          the planner. Hover a meal for <strong>Shop recipe</strong> to open chat with ingredients ready to send.
         </p>
       </header>
 
       <p className="cp-plan__summary">{plan.summary}</p>
-
-      {priority.length > 0 ? (
-        <section className="cp-card cp-card--tight">
-          <h2 className="cp-card__title">Active focus (priority)</h2>
-          <ol className="cp-plan__priority">
-            {priority.map((c) => (
-              <li key={c}>{c.replace(/_/g, " ")}</li>
-            ))}
-          </ol>
-        </section>
-      ) : null}
 
       {plan.topFoods && plan.topFoods.length > 0 ? (
         <section className="cp-card cp-card--tight" aria-labelledby="plan-foods-heading">
@@ -218,10 +210,11 @@ export default function PlanPage() {
           <strong>Hydration:</strong> {plan.hydration}
         </p>
         <p className="cp-plan__disclaimer">{plan.disclaimer}</p>
-        <Link to="/chat" className="cp-btn cp-btn--secondary">
+        <Link to="/chat" className="cp-btn cp-btn--secondary cp-plan__discuss">
           Discuss in chat
         </Link>
       </section>
+      </div>
     </div>
   );
 }

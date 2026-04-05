@@ -17,28 +17,28 @@ export default function HomePage() {
   return (
     <div className="cp-cover">
       <div className="cp-cover__panel">
-        <h1 className="cp-home__hero">Nutrition guidance for subhealth</h1>
+        <h1 className="cp-home__hero">A copilot for how you eat and feel</h1>
         <p className="cp-cover__lede">
-          CarePilot helps you organize how you eat when you are not quite feeling your best—sleep,
-          focus, digestion, muscles and joints, and immune resilience. Chat blends structured food
-          ideas with optional Browser Use Cloud so you can open trusted sites in a live browser
-          session.
+          Tell CarePilot what matters—sleep, focus, digestion, soreness, or staying well—and get
+          practical food ideas plus a daily meal plan shaped around you. Chat is your starting
+          point; when you want deeper help, optional Browser Use Cloud can open trusted sites in a
+          live session so you are not hunting tabs alone.
         </p>
         {!done ? (
           <p className="cp-cover__meta cp-cover__meta--warn">
-            Add your basics on the{" "}
+            Add a quick health snapshot on the{" "}
             <Link to="/input" className="cp-inline-link">
               input page
             </Link>{" "}
-            so recommendations and your meal plan can use your profile.
+            so chat suggestions and your meal plan match your profile.
           </p>
         ) : (
           <p className="cp-cover__meta">
-            Your profile is saved for this session. Open{" "}
+            Your snapshot is saved for this session. View or tweak it anytime in{" "}
             <Link to="/profile" className="cp-inline-link">
               Profile
-            </Link>{" "}
-            anytime to review it.
+            </Link>
+            .
           </p>
         )}
         <div className="cp-home__actions">
