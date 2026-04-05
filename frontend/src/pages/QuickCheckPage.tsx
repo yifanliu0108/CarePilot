@@ -283,61 +283,61 @@ export default function QuickCheckPage() {
                 }}
               />
             </div>
-            {symptomStep === 0 ? (
-              <p className="cp-quick__symptom-trust">Optional · not medical advice</p>
-            ) : null}
+            <p className="cp-quick__symptom-trust">Optional · not medical advice</p>
           </header>
 
-          <section
-            key={symptomStep}
-            className="cp-symptom__section"
-            aria-labelledby={`sym-sec-${page.sectionId}-${symptomStep}`}
-          >
-            <h2 id={`sym-sec-${page.sectionId}-${symptomStep}`} className="cp-symptom__topic">
-              <span className="cp-symptom__topic-text">{page.topicHeading}</span>
-              {page.topicPart ? (
-                <span className="cp-symptom__topic-part" aria-label={`Section part ${page.topicPart}`}>
-                  {page.topicPart}
-                </span>
-              ) : null}
-            </h2>
-            <div className="cp-symptom__chips cp-symptom__chips--stack" role="group">
-              {page.items.map((item) => {
-                const on = selectedSymptomIds.includes(item.id);
-                const aria = item.hint ? `${item.label}. ${item.hint}` : item.label;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={"cp-symptom__chip cp-symptom__chip--simple" + (on ? " cp-symptom__chip--on" : "")}
-                    aria-pressed={on}
-                    title={item.hint}
-                    aria-label={aria}
-                    onClick={() => toggleSymptom(item.id)}
-                  >
-                    <span className="cp-symptom__chip-check" aria-hidden>
-                      {on ? "✓" : ""}
-                    </span>
-                    <span className="cp-symptom__chip-text">
-                      <span className="cp-symptom__chip-label">{item.label}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="cp-quick__symptom-actions">
-            <button type="button" className="cp-btn cp-btn--primary cp-quick__symptom-next" onClick={onSymptomContinue}>
-              {symptomStep < SYMPTOM_WIZARD_PAGES.length - 1 ? "Next" : "See results"}
-            </button>
-            <button
-              type="button"
-              className="cp-quick__symptom-skip-link"
-              onClick={() => void finish(answers, [])}
+          <div className="cp-quick__symptom-main">
+            <section
+              key={symptomStep}
+              className="cp-symptom__section"
+              aria-labelledby={`sym-sec-${page.sectionId}-${symptomStep}`}
             >
-              Skip to snapshot
-            </button>
+              <h2 id={`sym-sec-${page.sectionId}-${symptomStep}`} className="cp-symptom__topic">
+                <span className="cp-symptom__topic-text">{page.topicHeading}</span>
+                {page.topicPart ? (
+                  <span className="cp-symptom__topic-part" aria-label={`Section part ${page.topicPart}`}>
+                    {page.topicPart}
+                  </span>
+                ) : null}
+              </h2>
+              <div className="cp-symptom__chips cp-symptom__chips--stack" role="group">
+                {page.items.map((item) => {
+                  const on = selectedSymptomIds.includes(item.id);
+                  const aria = item.hint ? `${item.label}. ${item.hint}` : item.label;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={"cp-symptom__chip cp-symptom__chip--simple" + (on ? " cp-symptom__chip--on" : "")}
+                      aria-pressed={on}
+                      title={item.hint}
+                      aria-label={aria}
+                      onClick={() => toggleSymptom(item.id)}
+                    >
+                      <span className="cp-symptom__chip-check" aria-hidden>
+                        {on ? "✓" : ""}
+                      </span>
+                      <span className="cp-symptom__chip-text">
+                        <span className="cp-symptom__chip-label">{item.label}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <div className="cp-quick__symptom-actions">
+              <button type="button" className="cp-btn cp-btn--primary cp-quick__symptom-next" onClick={onSymptomContinue}>
+                {symptomStep < SYMPTOM_WIZARD_PAGES.length - 1 ? "Next" : "See results"}
+              </button>
+              <button
+                type="button"
+                className="cp-quick__symptom-skip-link"
+                onClick={() => void finish(answers, [])}
+              >
+                Skip to snapshot
+              </button>
+            </div>
           </div>
 
           <div className="cp-quick__footer">

@@ -2005,6 +2005,10 @@
     padding: 1.85rem 1.35rem 1.65rem;
   }
 
+  .cp-page--quick .cp-page__inner.cp-quick.cp-quick--symptoms {
+    padding: 1.85rem 1.35rem 1.65rem;
+  }
+
   .cp-quick__nav {
     padding-left: 0.15rem;
     padding-right: 0.15rem;
@@ -2094,6 +2098,44 @@
   max-width: min(58rem, 100%);
   padding: clamp(2.5rem, 6.5vh, 4.25rem) clamp(2rem, 5.5vw, 3.75rem);
   border-radius: 32px;
+}
+
+/* Early signals: same card rhythm as Likert + stable vertical stack */
+.cp-page--quick .cp-page__inner.cp-quick.cp-quick--symptoms {
+  max-width: min(58rem, 100%);
+  padding: clamp(2.5rem, 6.5vh, 4.25rem) clamp(2rem, 5.5vw, 3.75rem);
+  border-radius: 32px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (min-width: 901px) {
+  .cp-page--quick .cp-page__inner.cp-quick.cp-quick--symptoms {
+    min-height: min(72vh, 46rem);
+  }
+}
+
+.cp-quick__symptom-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 3vh, 1.85rem);
+  min-height: 0;
+}
+
+.cp-quick--symptoms .cp-symptom__section {
+  margin-bottom: 0;
+}
+
+.cp-quick--symptoms .cp-quick__footer {
+  margin-top: clamp(1.75rem, 4.5vh, 2.75rem);
+  padding-top: 1.25rem;
+}
+
+.cp-quick--symptoms .cp-quick__back,
+.cp-quick--symptoms .cp-quick__exit {
+  font-size: 1.125rem;
 }
 
 .cp-quick__head {
@@ -2658,7 +2700,8 @@
 }
 
 .cp-quick__symptom-top {
-  margin-bottom: 1rem;
+  flex-shrink: 0;
+  margin-bottom: clamp(1.1rem, 2.5vh, 1.5rem);
 }
 
 .cp-quick__symptom-kicker {
@@ -2666,11 +2709,13 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
 }
 
 .cp-quick__symptom-kicker .cp-quick__eyebrow {
   margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.11em;
 }
 
 .cp-quick__symptom-count {
@@ -2684,7 +2729,7 @@
 
 .cp-quick__symptom-progress {
   height: 4px;
-  margin: 0 0 0.65rem;
+  margin: 0 0 0.5rem;
   border-radius: 999px;
   background: var(--cp-border-light);
   overflow: hidden;
@@ -2712,11 +2757,12 @@
 }
 
 .cp-symptom__topic {
-  margin: 0 0 1rem;
+  margin: 0 0 0.95rem;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.4rem 0.65rem;
+  min-height: 2.75rem;
   font-size: clamp(1.05rem, 2.2vw, 1.2rem);
   font-weight: 650;
   letter-spacing: -0.02em;
@@ -2838,9 +2884,9 @@
 }
 
 .cp-quick__symptom-actions {
-  margin-top: 1.35rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--cp-border-light);
+  margin-top: auto;
+  padding-top: 0;
+  border-top: none;
   display: flex;
   flex-direction: column;
   align-items: stretch;

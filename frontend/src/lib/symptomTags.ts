@@ -25,8 +25,6 @@ export const SYMPTOM_SECTIONS: SymptomSection[] = [
       { id: "brain-fog-most-days", label: "Brain fog most days", hint: "Hard to think clearly for weeks." },
       { id: "wake-unrefreshed", label: "Wake unrefreshed often", hint: "Sleep doesn’t feel restorative." },
       { id: "morning-headaches-new", label: "New morning headaches", hint: "Pattern changed recently." },
-      { id: "light-sound-sensitivity", label: "New light/sound sensitivity", hint: "Stronger than your usual." },
-      { id: "night-sweats-unexplained", label: "Night sweats (unclear cause)", hint: "Not just a warm room." },
       { id: "fatigue-worse-weeks", label: "Fatigue clearly worse for weeks", hint: "Not only “busy season” tired." },
     ],
   },
@@ -48,7 +46,6 @@ export const SYMPTOM_SECTIONS: SymptomSection[] = [
       { id: "heartburn-weeks", label: "Heartburn most days for weeks", hint: "Not just after one heavy meal." },
       { id: "appetite-major-shift", label: "Major appetite change", hint: "Much more or much less than usual." },
       { id: "thirst-urination-up", label: "Much thirstier / peeing more", hint: "New pattern, not just hot days." },
-      { id: "nausea-persistent", label: "Ongoing nausea", hint: "Most days for a stretch." },
     ],
   },
   {
@@ -59,7 +56,6 @@ export const SYMPTOM_SECTIONS: SymptomSection[] = [
       { id: "one-sided-weakness", label: "Weakness on one side", hint: "Sudden or progressive — urgent if sudden." },
       { id: "vision-changes-new", label: "New blur, flashes, or blind spots", hint: "Especially if rapid." },
       { id: "joint-stiffness-mornings", label: "Joint stiffness most mornings", hint: "Lasts longer than ~30 minutes." },
-      { id: "new-clumsiness", label: "New clumsiness / dropping things", hint: "Coordination feels worse." },
     ],
   },
   {
@@ -67,16 +63,15 @@ export const SYMPTOM_SECTIONS: SymptomSection[] = [
     heading: "Skin, weight & general",
     items: [
       { id: "weight-change-unexplained", label: "Weight change without trying", hint: "Up or down, noticeable." },
-      { id: "cuts-heal-slowly", label: "Cuts heal slower than usual", hint: "New for you." },
       { id: "new-lump-growing", label: "A new lump that grows", hint: "Anywhere on the body." },
-      { id: "skin-darkening-folds", label: "Dark velvety skin in folds", hint: "Neck, armpits — new or worse." },
       { id: "fevers-unexplained", label: "Fevers without a clear cold", hint: "Come back again and again." },
+      { id: "cuts-heal-slowly", label: "Cuts heal slower than usual", hint: "New for you." },
     ],
   },
 ];
 
-/** Max options per screen — keeps each step to a tiny decision set */
-const SYMPTOM_ITEMS_PER_PAGE = 3;
+/** Max options per screen (matches 3–4 items per category = one screen per topic) */
+const SYMPTOM_ITEMS_PER_PAGE = 4;
 
 export type SymptomWizardPage = {
   title: string;
@@ -89,7 +84,7 @@ export type SymptomWizardPage = {
 };
 
 /**
- * Flatten sections into small pages (≤3 chips) so nothing feels like a wall of text.
+ * Flatten sections into pages (≤4 chips); with 4 items per category, each topic is usually one screen.
  * Selections are still keyed by item id across pages.
  */
 function buildSymptomWizardPages(): SymptomWizardPage[] {
