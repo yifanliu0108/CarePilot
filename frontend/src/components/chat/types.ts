@@ -5,8 +5,7 @@ export type ResourceLink = { label: string; url: string };
 export type RecommendationAction = {
   id: string;
   label: string;
-  type: "task" | "browseruse";
-  buttonLabel?: string;
+  type: "task";
 };
 
 export type UserChatMessage = { id: string; role: "user"; text: string };

@@ -79,6 +79,12 @@ const assistResponseSchema = {
           type: Type.STRING,
           description: "Optional short note for the Live actions panel.",
         },
+        priceCheckItems: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description:
+            "US grocery search phrases for a price-check tool (max 5). Use ONLY if the user asked about shopping, store prices, groceries, what to buy, or meal-prep on a budget. Otherwise return an empty array []. Never fill this for unrelated symptom chat.",
+        },
       },
       required: ["id", "mode", "status", "task", "steps", "actions"],
     },
@@ -94,12 +100,20 @@ const nutritionAssistResponseSchema = {
     intent: {
       type: Type.STRING,
       description:
-        "Topic label: sleep, cognitive, digestive, musculoskeletal, immune, general, or meta — best match for the user message.",
+        "Topic label: sleep, cognitive, digestive, musculoskeletal, immune, general, or meta — best match for the user message AND conversation thread.",
     },
   },
 };
 
-const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's **nutrition and subhealth** assistant (food patterns, wellness habits, public nutrition resources). Not a doctor: no diagnosis or prescriptions. Prefer NIH, USDA, Harvard Nutrition Source, professional society pages. Use conversation history; short follow-ups ("?", "ok") continue the same topic—do not repeat the entire prior essay unless the user asks. If asked **which AI model** you are, say honestly: you are CarePilot using **Google Gemini** via the app's backend; the configured model id is given below. Output must follow the JSON schema; browserSession holds suggested research steps and https links only (no logins).`;
+const NUTRITION_SYSTEM_INSTRUCTION_BASE = `You are CarePilot's **nutrition and subhealth** assistant (food patterns, wellness habits, public nutrition resources). Not a doctor: no diagnosis or prescriptions. Prefer NIH, USDA, Harvard Nutrition Source, professional society pages.
+
+**Conversation state:** Always read the full thread. The latest user message may be short ("my neck hurts", "what about dinner?")—infer the active topic from prior turns. Short follow-ups ("?", "ok", "yes") continue the SAME topic; do not reset to generic wellness advice or unrelated tasks.
+
+**browserSession coherence:** \`task\`, every \`steps[].description\`, and \`actions\` (links) must directly support the user's stated concern in context. If they mention neck pain, ergonomics, anti-inflammatory eating, and when to seek care are on-topic; do not suggest unrelated workflows (e.g. generic grocery price hunts) unless they asked about shopping or prices.
+
+**priceCheckItems:** Return a non-empty array ONLY when the user explicitly wants help shopping, comparing prices, groceries, Walmart, meal prep buys, or food budget. If they only describe symptoms or ask for general nutrition guidance, return \`priceCheckItems: []\`.
+
+If asked **which AI model** you are, say honestly: CarePilot using **Google Gemini** via the app's backend; the configured model id is given below. Output must follow the JSON schema; browserSession holds suggested research steps and https links only (no logins).`;
 
 export function geminiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
@@ -169,6 +183,12 @@ export function normalizeAssistPayload(parsed) {
       }))
     : [];
 
+  const priceCheckItems = Array.isArray(raw.priceCheckItems)
+    ? raw.priceCheckItems
+        .filter((x) => typeof x === "string" && x.trim())
+        .slice(0, 8)
+    : [];
+
   return {
     intent,
     assistantText,
@@ -186,6 +206,7 @@ export function normalizeAssistPayload(parsed) {
       ...(typeof raw.note === "string" && raw.note.trim()
         ? { note: raw.note.trim() }
         : {}),
+      ...(priceCheckItems.length ? { priceCheckItems } : {}),
     },
   };
 }

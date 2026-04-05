@@ -22,12 +22,12 @@ export function buildRecommendationActions(
       actions.push({ id: `task-${i}-${label.slice(0, 12)}`, label, type: "task" });
     });
   }
-  if (cloudConfigured && live) {
+  const items = live?.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ?? [];
+  if (cloudConfigured && live && items.length > 0) {
     actions.push({
       id: "browseruse-grocery",
       label: "Check grocery prices (Walmart, Vons, Ralphs)",
-      type: "browseruse",
-      buttonLabel: "Run",
+      type: "task",
     });
   }
   return actions;

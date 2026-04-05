@@ -3,17 +3,17 @@ import { apiFetch } from "../api/session";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
-
-function isCloudRunning(view: CloudSessionView): boolean {
-  if (typeof view.stillRunning === "boolean") return view.stillRunning;
-  return cloudStatusStillRunning(view.status);
-}
 import type { BrowserSession, CloudSessionView } from "../components/chat/journeyTypes";
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
 import { assistantMessageFromApi } from "../components/chat/types";
+
+function isCloudRunning(view: CloudSessionView): boolean {
+  if (typeof view.stillRunning === "boolean") return view.stillRunning;
+  return cloudStatusStillRunning(view.status);
+}
 
 function cloudField<T>(o: Record<string, unknown>, camel: string, snake: string): T | undefined {
   const v = o[camel] ?? o[snake];
@@ -41,15 +41,62 @@ function parseCloudSession(raw: Record<string, unknown>): CloudSessionView {
   };
 }
 
-function taskFromLivePlan(live: BrowserSession, lastUserMessage: string) {
-  const stepLine = live.steps.map((s) => s.description).join(" ");
-  return [
-    "You are helping someone explore nutrition and trusted public health resources on the web only.",
-    `User said: "${lastUserMessage.slice(0, 500)}".`,
-    `Goal: ${live.task}`,
-    `Suggested steps: ${stepLine}`,
-    "Do not log into accounts or type passwords. Prefer official nutrition and government health sites. Summarize concrete next actions.",
-  ].join(" ");
+function buildCloudRequestBody(
+  live: BrowserSession,
+  lastUserMessage: string,
+  checkedIds: Set<string>,
+  sidebarActions: RecommendationAction[],
+): string | null {
+  const groceryId = "browseruse-grocery";
+  const wantGrocery = checkedIds.has(groceryId);
+  const items = live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ?? [];
+
+  const selectedDescriptions = (live.steps ?? [])
+    .filter((s) => checkedIds.has(`step-${live.id}-${s.order}`))
+    .map((s) => s.description)
+    .filter(Boolean);
+
+  const selectedOrphanLabels = sidebarActions
+    .filter((a) => checkedIds.has(a.id) && a.id.startsWith("task-"))
+    .map((a) => a.label)
+    .filter(Boolean);
+
+  const selectedCombined = [...selectedDescriptions, ...selectedOrphanLabels];
+
+  if (!wantGrocery && selectedCombined.length === 0) return null;
+
+  if (wantGrocery && items.length > 0) {
+    const nutritionSummary = [
+      live.task,
+      selectedCombined.length
+        ? `User-selected tasks to align with: ${selectedCombined.join(" · ")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    return JSON.stringify({
+      grocery: {
+        userMessage: lastUserMessage,
+        priceCheckItems: items,
+        nutritionSummary,
+      },
+    });
+  }
+
+  const stepLine =
+    selectedCombined.length > 0
+      ? selectedCombined.join(" | ")
+      : (live.steps ?? []).map((s) => s.description).join(" | ");
+
+  return JSON.stringify({
+    task: [
+      "You are helping someone explore nutrition and trusted public health resources on the web only.",
+      `User said: "${lastUserMessage.slice(0, 500)}".`,
+      `Goal: ${live.task}`,
+      `Focus on these user-selected tasks: ${stepLine}`,
+      "Do not log into accounts or type passwords. Prefer official nutrition and government health sites. Summarize concrete next actions.",
+    ].join(" "),
+  });
 }
 
 function makeId() {
@@ -57,7 +104,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. With BROWSER_USE_API_KEY on the server, use “Check grocery prices” to run Browser Use Cloud on Walmart, Vons, and Ralphs—results may be incomplete if sites block automation.";
+  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. When you get a plan, use the sidebar checkboxes to choose what the browser agent should do, then tap Run selected. Grocery price checks appear only when your plan includes shopping items; with BROWSER_USE_API_KEY on the server, those runs use Walmart, Vons, and Ralphs (sites may block automation).";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -65,6 +112,10 @@ export default function ChatPage() {
   ]);
   const [actions, setActions] = useState<RecommendationAction[]>([]);
   const [checkedIds, setCheckedIds] = useState<Set<string>>(() => new Set());
+  const checkedIdsRef = useRef(checkedIds);
+  checkedIdsRef.current = checkedIds;
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
   const [draft, setDraft] = useState("");
   const [live, setLive] = useState<BrowserSession | null>(null);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -82,7 +133,9 @@ export default function ChatPage() {
   useEffect(() => {
     const last = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
     if (!last || last.role !== "assistant") return;
-    setActions(buildRecommendationActions(last.text, live, cloudConfigured));
+    const built = buildRecommendationActions(last.text, live, cloudConfigured);
+    setActions(built);
+    setCheckedIds(new Set());
   }, [cloudConfigured, live]);
 
   useEffect(() => {
@@ -113,24 +166,25 @@ export default function ChatPage() {
     }
   }
 
-  async function startCloudTask() {
+  async function startCloudTask(options?: { forceIncludeGrocery?: boolean }) {
     if (!live) return;
+    const ids = new Set(checkedIdsRef.current);
+    if (options?.forceIncludeGrocery) ids.add("browseruse-grocery");
+    const body = buildCloudRequestBody(
+      live,
+      lastPatientMessageRef.current,
+      ids,
+      actionsRef.current,
+    );
+    if (!body) {
+      setCloudError("Select at least one step (or grocery prices, if listed), then tap Run selected.");
+      return;
+    }
     stopCloudPoll();
     setCloudError(null);
     setCloudActive(true);
     setCloudSession(null);
     try {
-      const items = live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()) ?? [];
-      const body =
-        items.length > 0
-          ? JSON.stringify({
-              grocery: {
-                userMessage: lastPatientMessageRef.current,
-                priceCheckItems: items,
-                nutritionSummary: live.task,
-              },
-            })
-          : JSON.stringify({ task: taskFromLivePlan(live, lastPatientMessageRef.current) });
       const res = await apiFetch("/api/journey/cloud-task", {
         method: "POST",
         body,
@@ -177,11 +231,6 @@ export default function ChatPage() {
     }
   }
 
-  async function handleBrowserUse(action: RecommendationAction) {
-    console.log("Running Browser Use for:", action.label);
-    await startCloudTask();
-  }
-
   function toggleChecked(id: string) {
     setCheckedIds((prev) => {
       const next = new Set(prev);
@@ -224,7 +273,8 @@ export default function ChatPage() {
       setMessages((m) => [...m, asst]);
       if (browserSession) setLive(browserSession);
       else setLive(null);
-      setActions(buildRecommendationActions(reply, browserSession ?? null, cloudConfigured));
+      const nextActions = buildRecommendationActions(reply, browserSession ?? null, cloudConfigured);
+      setActions(nextActions);
       setCheckedIds(new Set());
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Request failed";
@@ -242,7 +292,7 @@ export default function ChatPage() {
     <p className="flex flex-wrap items-center gap-2">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800">
         <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
-        {live.mode} · {live.status}
+        {live.mode === "gemini" ? "BrowserUse" : live.mode} · {live.status}
       </span>
       {cloudConfigured ? (
         <span className="text-slate-500">Cloud ready</span>
@@ -272,13 +322,10 @@ export default function ChatPage() {
         cloudConfigured={cloudConfigured}
         liveExists={!!live}
         onCheckGroceryPrices={
-          cloudConfigured && live
-            ? () =>
-                void handleBrowserUse({
-                  id: "browseruse-grocery",
-                  label: "Check grocery prices",
-                  type: "browseruse",
-                })
+          cloudConfigured &&
+          live &&
+          (live.priceCheckItems?.filter((x) => typeof x === "string" && x.trim()).length ?? 0) > 0
+            ? () => void startCloudTask({ forceIncludeGrocery: true })
             : undefined
         }
         cloudActive={cloudActive}
@@ -287,9 +334,13 @@ export default function ChatPage() {
         actions={actions}
         checkedIds={checkedIds}
         onToggle={toggleChecked}
-        onBrowserUse={(a) => void handleBrowserUse(a)}
-        browserUseLoading={cloudActive}
-        browserUseDisabled={!live || !cloudConfigured}
+        onRunSelected={() => void startCloudTask()}
+        runLoading={cloudActive}
+        runDisabled={
+          !live ||
+          !cloudConfigured ||
+          !buildCloudRequestBody(live, lastPatientMessageRef.current, checkedIds, actions)
+        }
         liveSummary={liveSummary}
       >
         {cloudActive && !cloudSession ? (

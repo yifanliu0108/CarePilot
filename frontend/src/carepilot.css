@@ -28,7 +28,7 @@
 
 .cp-logo__img {
   display: block;
-  height: 64px;
+  height: 80px;
   width: auto;
   max-width: 100%;
   object-fit: contain;
@@ -36,12 +36,12 @@
 }
 
 .cp-logo--compact .cp-logo__img {
-  height: 48px;
+  height: 52px;
 }
 
 @media (min-width: 640px) {
   .cp-logo--compact .cp-logo__img {
-    height: 56px;
+    height: 60px;
   }
 }
 
@@ -50,7 +50,7 @@
 }
 
 .cp-logo--hero .cp-logo__img {
-  height: 64px;
+  height: 112px;
   object-position: center;
 }
 

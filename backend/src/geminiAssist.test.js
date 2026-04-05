@@ -36,6 +36,23 @@ test("buildGeminiContents interleaves history and current user turn", () => {
   assert.ok(String(c[2].parts?.[0]?.text).includes("?"));
 });
 
+test("normalizeAssistPayload passes through priceCheckItems on browserSession", () => {
+  const r = normalizeAssistPayload({
+    intent: "musculoskeletal",
+    assistantText: "Try gentle stretches.",
+    browserSession: {
+      id: "s1",
+      mode: "gemini",
+      status: "preview",
+      task: "Neck comfort",
+      steps: [{ order: 1, description: "Ergo tips", state: "pending" }],
+      actions: [{ id: "nih", label: "NIH", url: "https://www.nih.gov/" }],
+      priceCheckItems: ["olive oil", "frozen berries"],
+    },
+  });
+  assert.deepEqual(r.browserSession.priceCheckItems, ["olive oil", "frozen berries"]);
+});
+
 test("normalizeAssistPayload repairs bad action URLs", () => {
   const r = normalizeAssistPayload({
     intent: "care_search",

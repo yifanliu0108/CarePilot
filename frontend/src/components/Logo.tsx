@@ -16,8 +16,8 @@ export function Logo({ variant = "default", className = "" }: LogoProps) {
         src={LOGO_SRC}
         alt="CarePilot"
         className="cp-logo__img"
-        width={240}
-        height={64}
+        width={536}
+        height={465}
         decoding="async"
       />
     </div>

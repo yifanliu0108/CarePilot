@@ -76,7 +76,8 @@ const CATEGORIES = {
     ],
   },
   musculoskeletal: {
-    keywords: /\b(joint|muscle|pain|back|neck|arthritis|bone|inflammation)\b/,
+    keywords:
+      /\b(joint|muscle|pain|back|neck|arthritis|bone|inflammation|hurt|hurts|aching|ache|aches|sore|soreness|stiff|stiffness)\b/,
     task: "Look up anti-inflammatory eating patterns (general)",
     priceCheckItems: [
       "extra virgin olive oil",
