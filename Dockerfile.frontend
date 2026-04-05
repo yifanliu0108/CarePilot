@@ -1,0 +1,22 @@
+# Frontend-only image — no backend deps (no browser-use / canvas native builds).
+# Railway (carepilot-frontend): set Dockerfile path to this file, or use Nixpacks + scoped npm ci.
+# syntax=docker/dockerfile:1
+
+FROM node:22-alpine AS build
+WORKDIR /app
+ENV NPM_CONFIG_MAXSOCKETS=1
+COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/
+COPY backend/package.json backend/
+RUN npm ci --workspace=carepilot-frontend --no-audit --no-fund
+COPY . .
+RUN npm run build -w carepilot-frontend
+
+FROM node:22-alpine
+WORKDIR /app
+RUN npm install -g serve@14
+COPY --from=build /app/frontend/dist ./dist
+ENV NODE_ENV=production
+EXPOSE 3000
+# Railway sets PORT; serve must bind 0.0.0.0
+CMD ["sh", "-c", "exec serve -s dist -l tcp://0.0.0.0:${PORT:-3000}"]

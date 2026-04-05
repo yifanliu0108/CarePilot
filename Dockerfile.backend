@@ -1,0 +1,23 @@
+# Backend image — Debian has glibc; install build deps so optional native modules (e.g. canvas via browser-use) can compile.
+# Railway (carepilot-backend): set Dockerfile path to this file.
+# syntax=docker/dockerfile:1
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NPM_CONFIG_MAXSOCKETS=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/
+COPY backend/package.json backend/
+RUN npm ci --omit=dev --workspace=carepilot-backend --no-audit --no-fund
+
+COPY backend/src ./backend/src
+WORKDIR /app/backend
+EXPOSE 3001
+CMD ["node", "src/index.js"]

@@ -83,10 +83,17 @@ The backend can serve the built SPA from `frontend/dist` when `index.html` is pr
 
 From the repo root (requires Docker). The image uses **workspace-scoped** `npm ci` so the build fits in small RAM limits (avoids exit 137 OOM):
 
+**Split images** (recommended — matches Railway frontend vs backend):
+
 ```bash
-docker build -f Dockerfile.monorepo -t carepilot .
-docker run --rm -p 3001:3001 -e PORT=3001 carepilot
+docker build -f Dockerfile.frontend -t carepilot-ui .
+docker run --rm -p 3000:3000 -e PORT=3000 carepilot-ui
+
+docker build -f Dockerfile.backend -t carepilot-api .
+docker run --rm -p 3001:3001 -e PORT=3001 carepilot-api
 ```
+
+On **Railway**, set each service’s **Dockerfile path** to `Dockerfile.frontend` or `Dockerfile.backend`. Do **not** use one combined image for both unless you build a custom file — the backend pulls native deps (`canvas` via `browser-use`) that **Alpine** cannot compile without extra packages; `Dockerfile.backend` uses **Debian bookworm-slim** and installs Cairo/Pango build deps.
 
 Open http://localhost:3001 — UI + `/api` on one port.
 

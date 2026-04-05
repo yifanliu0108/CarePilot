@@ -1,8 +1,7 @@
-# Use Railpack/Nixpacks instead of Docker so `npm ci` runs on the builder VM
-# (Docker builds often hit OOM / exit 137 on full monorepo installs).
-# Per-service start commands still belong in the Railway dashboard, e.g.:
-#   backend:  npm start
-#   frontend: npm run start:frontend
+# Prefer Nixpacks/Railpack when there is no root Dockerfile.
+# If you use Docker per service, set Dockerfile path:
+#   carepilot-frontend → Dockerfile.frontend
+#   carepilot-backend    → Dockerfile.backend
 
 [build]
 builder = "nixpacks"
