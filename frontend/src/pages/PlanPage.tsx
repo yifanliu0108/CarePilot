@@ -123,7 +123,7 @@ export default function PlanPage() {
 
   if (loading) {
     return (
-      <div className="cp-page">
+      <div className="cp-page cp-page--plan">
         <div className="cp-page__inner">
           <p className="cp-page__sub">Loading meal plan…</p>
         </div>
@@ -133,7 +133,7 @@ export default function PlanPage() {
 
   if (error || !plan) {
     return (
-      <div className="cp-page">
+      <div className="cp-page cp-page--plan">
         <div className="cp-page__inner">
           <p className="cp-form__error" role="alert">
             {error ?? "No plan"}
@@ -149,7 +149,7 @@ export default function PlanPage() {
   const snacks = plan.meals.snacks.map((s) => normalizeMealSlot(s));
 
   return (
-    <div className="cp-page">
+    <div className="cp-page cp-page--plan">
       <div className="cp-page__inner">
       <header className="cp-page__head">
         <h1 className="cp-page__title">Daily meal plan</h1>
@@ -210,7 +210,7 @@ export default function PlanPage() {
           <strong>Hydration:</strong> {plan.hydration}
         </p>
         <p className="cp-plan__disclaimer">{plan.disclaimer}</p>
-        <Link to="/chat" className="cp-btn cp-btn--secondary">
+        <Link to="/chat" className="cp-btn cp-btn--secondary cp-plan__discuss">
           Discuss in chat
         </Link>
       </section>

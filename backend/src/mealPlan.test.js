@@ -20,8 +20,9 @@ test("no active ratings yields balanced plan and empty concerns", () => {
   assert.equal(p.concerns.length, 0);
   assert.ok(p.meals.breakfast.text.length > 5);
   assert.ok(Array.isArray(p.meals.breakfast.labels) && p.meals.breakfast.labels.length >= 1);
-  assert.ok(Array.isArray(p.meals.snacks) && p.meals.snacks.length === 2);
+  assert.ok(Array.isArray(p.meals.snacks) && p.meals.snacks.length === 3);
   assert.ok(p.meals.snacks[0].labels.length >= 1);
+  assert.ok(p.meals.snacks[2].labels.length >= 1);
   assert.ok(p.topFoods.length > 0);
 });
 

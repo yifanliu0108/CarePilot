@@ -385,12 +385,21 @@ export function buildDailyMealPlan(profile) {
     foodScores,
     usage,
   );
+  const snack3 = pickBestTemplate(
+    snackPool.filter(
+      (s) => s.text !== snack1?.text && s.text !== snack2?.text,
+    ),
+    (m) => m.ingredients,
+    foodScores,
+    usage,
+  );
 
   const summary = buildPlanSummary(profile, activeCategories);
 
   const snacks = [
     mealSlot(snack1, "Fruit and nuts"),
     mealSlot(snack2, "Yogurt with berries"),
+    mealSlot(snack3, "Hummus with vegetables"),
   ].filter((s) => s.text);
 
   return {

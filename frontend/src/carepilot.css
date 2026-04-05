@@ -25,6 +25,61 @@
   );
 }
 
+@keyframes cp-chat-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cp-chat-layout > * {
+  opacity: 0;
+  animation: cp-chat-pane-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.cp-chat-layout > *:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.cp-chat-layout > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-chat-layout > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* ChatWindow compact logo height — keep in sync with .cp-logo--compact .cp-logo__img */
+:root {
+  --cp-chat-compact-logo-height: 52px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --cp-chat-compact-logo-height: 60px;
+  }
+}
+
+/* Minimal Browser Use panel: line up with "CarePilot" title in first message (header py-4×2 + list py-4 + card padding-top) */
+.cp-browser-use-minimal__align {
+  padding-top: calc(3rem + var(--cp-chat-compact-logo-height) + 1rem);
+  padding-bottom: 2rem;
+}
+
+@media (min-width: 640px) {
+  .cp-browser-use-minimal__align {
+    padding-top: calc(3rem + var(--cp-chat-compact-logo-height) + 1.25rem);
+  }
+}
+
 .cp-sidebar {
   width: 220px;
   flex-shrink: 0;
@@ -1054,6 +1109,65 @@
   max-width: none;
 }
 
+/* Meal plan: full-width like health input + staggered entrance (same keyframes as input) */
+.cp-page--plan .cp-page__inner {
+  max-width: none;
+  width: 100%;
+}
+
+.cp-page--plan .cp-page__inner > * {
+  opacity: 0;
+  animation: cp-input-page-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(4) {
+  animation-delay: 0.42s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(5) {
+  animation-delay: 0.56s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(6) {
+  animation-delay: 0.7s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(7) {
+  animation-delay: 0.84s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(8) {
+  animation-delay: 0.98s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(9) {
+  animation-delay: 1.12s;
+}
+
+.cp-page--plan .cp-page__inner > *:nth-child(10) {
+  animation-delay: 1.26s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-page--plan .cp-page__inner > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
 .cp-page__head {
   margin-bottom: 1.5rem;
 }
@@ -1485,6 +1599,34 @@
   font-size: 0.78rem;
   color: #94a3b8;
   line-height: 1.45;
+}
+
+.cp-plan__discuss {
+  display: inline-flex;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.cp-plan__discuss:hover {
+  transform: scale(1.06);
+}
+
+.cp-plan__discuss:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cp-plan__discuss {
+    transition:
+      transform 0.12s,
+      box-shadow 0.12s;
+  }
+
+  .cp-plan__discuss:hover,
+  .cp-plan__discuss:active {
+    transform: none;
+  }
 }
 
 @media (max-width: 900px) {
