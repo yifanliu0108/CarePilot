@@ -17,9 +17,18 @@ npm install
 
 npm workspaces install dependencies for both packages (hoisted under the root `node_modules` when possible).
 
-### Backend environment (optional)
+### Hackathon / team quickstart (Gemini)
 
-Copy `backend/.env.example` to **`backend/.env`** and set `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/apikey). The server loads **`backend/.env`** even when you run `npm run dev` from the repo root (you can alternatively use a `.env` at the repo root). Without a key, `POST /api/journey/assist` uses the built-in mock planner (`mock` in Live actions). For Browser Use Cloud, set `BROWSER_USE_API_KEY` (see `backend/.env.example`).
+**Without a Gemini key, chat uses mock planners** — replies look repetitive and **are not** the real model. Each machine needs its own env file.
+
+1. Copy the template: **`cp backend/.env.example backend/.env`**
+2. Add **`GEMINI_API_KEY=`** from [Google AI Studio](https://aistudio.google.com/apikey) (one key per person, or **one shared team key** in a private Slack/Discord — **never commit it**).
+3. From the repo root: **`npm run dev`**
+4. Confirm the API terminal prints **`Gemini: enabled (GEMINI_API_KEY loaded)`**, or open **`http://localhost:3001/api/journey/gemini-status`** — you want **`"configured": true`**.
+
+The server loads **`backend/.env`** even when you run `npm run dev` from the repo root (a **`.env`** at the repo root also works). **Do not commit `backend/.env`.** After the event, rotate the key if it was pasted in a public channel.
+
+**Optional:** [Browser Use Cloud](https://cloud.browser-use.com/settings) — set **`BROWSER_USE_API_KEY`** in the same file (see `backend/.env.example`).
 
 ## Dev
 
