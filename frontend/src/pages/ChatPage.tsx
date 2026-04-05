@@ -381,7 +381,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-slate-100 lg:flex-row">
+    <div className="cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
       <ChatWindow
         className="lg:min-w-0 lg:flex-[3] lg:max-w-none"
         listRef={listRef}
