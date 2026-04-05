@@ -143,7 +143,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi! I'm your CarePilot wellness assistant.\n\nAsk about food, movement, sleep, stress, or habits—I'll keep replies short and easy to scan, and I'll usually suggest a couple of follow-up questions so we can go deeper.\n\nWhen you have a plan in the side panel, check the steps you want and tap “Run selected” so Browser Use Cloud can run in a real browser (add BROWSER_USE_API_KEY on the server). Your profile and meal plan stay in sync when you're signed in.";
+  "Hi! I'm CarePilot, your wellness assistant.\n\nTell me your goal (sleep, focus, digestion, fitness, or immunity), and I'll give you a food rec and meal plan.\n\nWhen you get a plan, select the steps you want in the side panel and tap “Run selected” to execute them.";
 
 export default function ChatPage() {
   const { refreshMe, sessionId } = useSession();

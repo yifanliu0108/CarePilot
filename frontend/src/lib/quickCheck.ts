@@ -84,6 +84,58 @@ export function risksFromAnswers(selectedRisks: number[]): RiskRow {
   };
 }
 
+/** Saved profile ratings (Health input / last quick check). */
+export type ProfileSubhealthRatings = {
+  sleepRating: number | null | undefined;
+  cognitiveRating: number | null | undefined;
+  digestiveRating: number | null | undefined;
+  musculoskeletalRating: number | null | undefined;
+  immuneRating: number | null | undefined;
+};
+
+function ratingInRange(n: unknown): boolean {
+  const x = typeof n === "number" ? n : typeof n === "string" ? Number(n) : NaN;
+  return Number.isFinite(x) && x >= 1 && x <= 5;
+}
+
+export function profileHasSubhealthSnapshot(
+  p: ProfileSubhealthRatings | null | undefined,
+): boolean {
+  if (!p) return false;
+  const nums = [
+    p.sleepRating,
+    p.cognitiveRating,
+    p.digestiveRating,
+    p.musculoskeletalRating,
+    p.immuneRating,
+  ];
+  return nums.every((n) => ratingInRange(n));
+}
+
+/**
+ * Rebuild quick-check domains from persisted profile. Stress is stored as immuneRating;
+ * musculoskeletal is max(energy, pain) on save — we only have one stored value, so energy & pain
+ * both display that value for the blended score.
+ */
+export function riskRowFromProfileRatings(
+  p: ProfileSubhealthRatings | null | undefined,
+): RiskRow | null {
+  if (!profileHasSubhealthSnapshot(p) || !p) return null;
+  const clamp = (n: unknown) => {
+    const x = typeof n === "number" ? n : typeof n === "string" ? Number(n) : NaN;
+    if (!Number.isFinite(x)) return 3;
+    return Math.min(5, Math.max(1, Math.round(x)));
+  };
+  const m = clamp(p.musculoskeletalRating);
+  return {
+    sleep: clamp(p.sleepRating),
+    energy: m,
+    stress: clamp(p.immuneRating),
+    focus: clamp(p.cognitiveRating),
+    pain: m,
+  };
+}
+
 /** Weights for blended risk (same scale as each answer: 1–5, higher = more concern). */
 export const DOMAIN_WEIGHTS: Record<keyof RiskRow, number> = {
   sleep: 0.25,

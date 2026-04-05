@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { Link } from "react-router-dom";
 import { HeroBackdrop } from "../components/HeroBackdrop";
 import { apiFetch } from "../api/session";
@@ -8,12 +16,19 @@ import {
   illnessLikelihoodIndexPercent,
   LIKERT_OPTIONS_VISUAL,
   overallRisk,
+  profileHasSubhealthSnapshot,
   QUICK_QUESTIONS,
+  riskRowFromProfileRatings,
   risksFromAnswers,
   signalStrengthPercent,
   symptomsOnlyLikelihoodPercent,
   type RiskRow,
 } from "../lib/quickCheck";
+import {
+  persistQuickCheckLocalSnapshot,
+  profileRatingsFromLocalSnapshot,
+  readQuickCheckLocalSnapshot,
+} from "../lib/quickCheckLocalSnapshot";
 import { SYMPTOM_WIZARD_PAGES } from "../lib/symptomTags";
 
 const SIGNAL_RING_R = 54;
@@ -107,6 +122,28 @@ function QuickCheckShell({
   );
 }
 
+/** Read-only 1–5 scale matching Health input “Subhealth focus”. */
+function SubhealthStatRow({ label, value }: { label: string; value: number }) {
+  const v = Math.min(5, Math.max(1, Math.round(value)));
+  return (
+    <div className="cp-rating cp-quick__stat-row">
+      <span className="cp-rating__label">{label}</span>
+      <div className="cp-rating__scale" role="img" aria-label={`${label}: ${v} out of 5`}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span
+            key={n}
+            className={
+              "cp-rating__btn cp-rating__btn--display" + (v === n ? " cp-rating__btn--active" : "")
+            }
+          >
+            {n}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function buildProfileBody(
   existing: RiskRow,
   profile: HealthProfile | undefined,
@@ -133,10 +170,10 @@ function buildProfileBody(
 }
 
 export default function QuickCheckPage() {
-  const { me, refreshMe, sessionId } = useSession();
+  const { me, refreshMe, sessionId, loading } = useSession();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [phase, setPhase] = useState<"likert" | "symptoms" | "result">("likert");
+  const [phase, setPhase] = useState<"snapshot" | "likert" | "symptoms" | "result">("likert");
   const [symptomStep, setSymptomStep] = useState(0);
   const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [savedSymptomIds, setSavedSymptomIds] = useState<string[]>([]);
@@ -147,12 +184,47 @@ export default function QuickCheckPage() {
   /** Brief “selected” state with checkmark before advancing (16p-style) */
   const [selectedRisk, setSelectedRisk] = useState<number | null>(null);
   const pickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** True while user chose “Retake” so we do not auto-open the profile snapshot over the quiz. */
+  const retakeFlowRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (pickTimerRef.current) clearTimeout(pickTimerRef.current);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (loading) return;
+    if (retakeFlowRef.current) return;
+    const hasServer =
+      !!sessionId &&
+      !!me?.profile &&
+      profileHasSubhealthSnapshot(me.profile);
+    const local = readQuickCheckLocalSnapshot();
+    const shouldOpenSnapshot =
+      hasServer || (!!local && (!sessionId || !hasServer));
+    if (!shouldOpenSnapshot) return;
+    setPhase((ph) => {
+      if (ph !== "likert") return ph;
+      if (step !== 0 || answers.length > 0) return ph;
+      return "snapshot";
+    });
+  }, [loading, sessionId, me?.profile, step, answers.length]);
+
+  useEffect(() => {
+    if (phase === "result" || phase === "snapshot") retakeFlowRef.current = false;
+  }, [phase]);
+
+  useEffect(() => {
+    if (!sessionId) {
+      retakeFlowRef.current = false;
+      setPhase((ph) => {
+        if (ph !== "snapshot") return ph;
+        if (readQuickCheckLocalSnapshot()) return ph;
+        return "likert";
+      });
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     if (phase !== "symptoms") return;
@@ -165,6 +237,20 @@ export default function QuickCheckPage() {
   const q = QUICK_QUESTIONS[step];
   const total = QUICK_QUESTIONS.length;
 
+  function beginRetake() {
+    retakeFlowRef.current = true;
+    setPhase("likert");
+    setStep(0);
+    setAnswers([]);
+    setSymptomStep(0);
+    setSelectedSymptomIds([]);
+    setRiskRow(null);
+    setScore(null);
+    setSavedSymptomIds([]);
+    setSaveError(null);
+    setSelectedRisk(null);
+  }
+
   const finish = useCallback(
     async (finalAnswers: number[], symptomTagIds: string[]) => {
       const risks = risksFromAnswers(finalAnswers);
@@ -175,6 +261,14 @@ export default function QuickCheckPage() {
       setPhase("result");
       setSaveError(null);
       if (!sessionId) {
+        persistQuickCheckLocalSnapshot({
+          riskRow: risks,
+          symptomTagIds,
+          digestiveRating:
+            typeof me?.profile?.digestiveRating === "number"
+              ? me.profile.digestiveRating
+              : 3,
+        });
         setSaving(false);
         return;
       }
@@ -191,6 +285,14 @@ export default function QuickCheckPage() {
         await refreshMe();
       } catch (e) {
         setSaveError(e instanceof Error ? e.message : "Save failed");
+        persistQuickCheckLocalSnapshot({
+          riskRow: risks,
+          symptomTagIds,
+          digestiveRating:
+            typeof me?.profile?.digestiveRating === "number"
+              ? me.profile.digestiveRating
+              : 3,
+        });
       } finally {
         setSaving(false);
       }
@@ -249,6 +351,180 @@ export default function QuickCheckPage() {
     setSelectedRisk(null);
     setAnswers((a) => a.slice(0, -1));
     setStep(step - 1);
+  }
+
+  if (loading) {
+    return (
+      <QuickCheckShell scroll showBrandNav={!sessionId}>
+        <div className="cp-page__inner cp-quick cp-quick--snapshot">
+          <p className="cp-quick__snapshot-loading" role="status">
+            Loading…
+          </p>
+        </div>
+      </QuickCheckShell>
+    );
+  }
+
+  if (phase === "snapshot") {
+    const local = readQuickCheckLocalSnapshot();
+    const serverOk =
+      !!sessionId &&
+      !!me?.profile &&
+      profileHasSubhealthSnapshot(me.profile);
+    const row = serverOk
+      ? riskRowFromProfileRatings(me.profile)
+      : local?.riskRow ?? null;
+
+    if (!row) {
+      return (
+        <QuickCheckShell scroll showBrandNav={!sessionId}>
+          <div className="cp-page__inner cp-quick cp-quick--snapshot">
+            <p className="cp-quick__snapshot-lede">
+              We couldn&apos;t load saved scores. {sessionId ? (
+                <>
+                  Try <Link to="/input">Health input</Link> or start the check again.
+                </>
+              ) : (
+                <>Run the 2-minute check to see your subhealth snapshot here.</>
+              )}
+            </p>
+            <button type="button" className="cp-btn cp-btn--primary" onClick={beginRetake}>
+              Start quick check
+            </button>
+          </div>
+        </QuickCheckShell>
+      );
+    }
+
+    const stat = serverOk
+      ? me!.profile!
+      : profileRatingsFromLocalSnapshot(local!);
+    const tagIds = serverOk ? (me!.profile!.symptomTagIds ?? []) : local!.symptomTagIds;
+    const blended = overallRisk(row);
+    const roundedScore = Math.round(blended * 10) / 10;
+    const answerPct = signalStrengthPercent(roundedScore);
+    const likelihoodPct = illnessLikelihoodIndexPercent(roundedScore, tagIds.length);
+    const bumpApplied = Math.max(0, likelihoodPct - answerPct);
+    const breakdown = domainBreakdown(row);
+
+    return (
+      <QuickCheckShell scroll showBrandNav={!sessionId}>
+        <div className="cp-page__inner cp-quick cp-quick--snapshot">
+          <header className="cp-quick__snapshot-head">
+            <p className="cp-quick__eyebrow">Quick check</p>
+            <h1 className="cp-quick__snapshot-title">Your subhealth snapshot</h1>
+            <p className="cp-quick__snapshot-lede">
+              {serverOk ? (
+                <>
+                  Saved scores from your profile (Health input and your last quick check). Educational only—not
+                  medical advice.
+                </>
+              ) : sessionId ? (
+                <>
+                  Showing quick-check results stored on <strong>this browser</strong>. Open{" "}
+                  <Link to="/input">Health input</Link> to align every rating with your account, or retake the
+                  check while signed in. Educational only—not medical advice.
+                </>
+              ) : (
+                <>
+                  From your last check on <strong>this browser</strong> only. Sign in to save to your profile
+                  and sync across devices. Educational only—not medical advice.
+                </>
+              )}
+            </p>
+          </header>
+
+          <SubhealthScoreRing
+            percent={likelihoodPct}
+            answerPercent={answerPct}
+            earlySignalBump={bumpApplied}
+            earlySignalCount={tagIds.length}
+          />
+
+          <section className="cp-quick__snapshot-stats" aria-labelledby="quick-snapshot-stats-h">
+            <h2 id="quick-snapshot-stats-h" className="cp-quick__snapshot-stats-title">
+              Subhealth focus (1–5)
+            </h2>
+            <p className="cp-quick__snapshot-stats-hint">
+              {serverOk ? (
+                <>
+                  Same scale as <Link to="/input">Health input</Link>: higher means more focus or bother. Meal
+                  plans treat <strong>3+</strong> as an active concern.
+                </>
+              ) : sessionId ? (
+                <>
+                  Higher means more focus or bother. Meal plans treat <strong>3+</strong> as an active concern.{" "}
+                  <Link to="/input">Health input</Link> has the same 1–5 rows.
+                </>
+              ) : (
+                <>
+                  Higher means more focus or bother (same idea as the full health form).{" "}
+                  <Link to="/login" state={{ from: "/quick-check" }}>
+                    Sign in
+                  </Link>{" "}
+                  to edit all areas in Health input.
+                </>
+              )}
+            </p>
+            <div className="cp-rating__list cp-quick__snapshot-rating-list">
+              <SubhealthStatRow label="Sleep & recovery" value={stat.sleepRating ?? 3} />
+              <SubhealthStatRow label="Cognitive & focus" value={stat.cognitiveRating ?? 3} />
+              <SubhealthStatRow label="Digestive" value={stat.digestiveRating ?? 3} />
+              <SubhealthStatRow label="Musculoskeletal" value={stat.musculoskeletalRating ?? 3} />
+              <SubhealthStatRow label="Immune" value={stat.immuneRating ?? 3} />
+            </div>
+          </section>
+
+          <section className="cp-quick__weights cp-quick__weights--snapshot" aria-labelledby="quick-snapshot-weights-h">
+            <h2 id="quick-snapshot-weights-h" className="cp-quick__weights-title">
+              Quick check domains (weighted)
+            </h2>
+            <p className="cp-quick__weights-lede">
+              These five areas feed the subhealth ring. Weights match your blended score; early-signal tags
+              from the optional wizard add extra percentage on top.
+            </p>
+            <ul className="cp-quick__weights-list">
+              {breakdown.map((d) => {
+                const frac = Math.min(1, Math.max(0, (d.risk - 1) / 4));
+                return (
+                  <li key={d.key} className="cp-quick__weight-item">
+                    <div className="cp-quick__weight-item-head">
+                      <span className="cp-quick__weight-label">{d.label}</span>
+                      <span className="cp-quick__weight-meta">
+                        <span className="cp-quick__weight-pct">{d.weightPct}%</span>
+                        <span className="cp-quick__weight-risk" aria-label={`Risk level ${d.risk} out of 5`}>
+                          {d.risk}/5
+                        </span>
+                      </span>
+                    </div>
+                    <div
+                      className="cp-quick__weight-bar"
+                      role="presentation"
+                      style={{ "--cp-weight-fill": String(frac) } as CSSProperties}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <div className="cp-quick__snapshot-actions">
+            <button type="button" className="cp-btn cp-btn--primary" onClick={beginRetake}>
+              Retake quick check
+            </button>
+            {sessionId ? (
+              <Link to="/input" className="cp-btn cp-btn--secondary">
+                Edit in Health input
+              </Link>
+            ) : (
+              <Link to="/login" state={{ from: "/quick-check" }} className="cp-btn cp-btn--secondary">
+                Sign in to save
+              </Link>
+            )}
+          </div>
+        </div>
+      </QuickCheckShell>
+    );
   }
 
   if (phase === "result") {
@@ -312,10 +588,22 @@ export default function QuickCheckPage() {
               {!sessionId ? (
                 <>
                   <p className="cp-quick__result-cta-lede">
-                    Sign in to save this check-in to your profile. You&apos;ll get the sidebar:{" "}
-                    <strong>Quick check</strong>, <strong>Health input</strong>, <strong>Chat</strong>, and{" "}
-                    <strong>Meal plan</strong>. Re-run quick check anytime from the nav or from <strong>Profile</strong>.
+                    Your score is saved on this device. Sign in to keep it in your profile—you&apos;ll get the
+                    sidebar: <strong>Quick check</strong>, <strong>Health input</strong>, <strong>Chat</strong>, and{" "}
+                    <strong>Meal plan</strong>.
                   </p>
+                  <div className="cp-quick__result-actions">
+                    <button
+                      type="button"
+                      className="cp-btn cp-btn--secondary"
+                      onClick={() => setPhase("snapshot")}
+                    >
+                      Back to overview
+                    </button>
+                    <button type="button" className="cp-btn cp-btn--secondary" onClick={beginRetake}>
+                      Retake quick check
+                    </button>
+                  </div>
                   <Link
                     to="/login"
                     state={{ from: "/quick-check" }}
@@ -328,11 +616,25 @@ export default function QuickCheckPage() {
                 <>
                   {saving ? <p className="cp-quick__saving">Saving your snapshot…</p> : null}
                   {!saving ? (
-                    <p className="cp-quick__result-cta-lede cp-quick__result-cta-lede--signed">
-                      This check-in is saved to your profile. Use the sidebar for <strong>Quick check</strong>,{" "}
-                      <strong>Health input</strong>, <strong>Chat</strong>, and <strong>Meal plan</strong>, or open{" "}
-                      <strong>Profile</strong> to run quick check again.
-                    </p>
+                    <>
+                      <p className="cp-quick__result-cta-lede cp-quick__result-cta-lede--signed">
+                        This check-in is saved to your profile. Use the sidebar for <strong>Quick check</strong>,{" "}
+                        <strong>Health input</strong>, <strong>Chat</strong>, and <strong>Meal plan</strong>, or open{" "}
+                        <strong>Profile</strong> to run quick check again.
+                      </p>
+                      <div className="cp-quick__result-actions">
+                        <button
+                          type="button"
+                          className="cp-btn cp-btn--secondary"
+                          onClick={() => setPhase("snapshot")}
+                        >
+                          Back to overview
+                        </button>
+                        <button type="button" className="cp-btn cp-btn--primary" onClick={beginRetake}>
+                          Retake quick check
+                        </button>
+                      </div>
+                    </>
                   ) : null}
                 </>
               )}
