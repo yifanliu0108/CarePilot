@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": ["frontend", "backend"],
   "scripts": {
+    "free-port:3001": "sh -c 'pids=$(lsof -tiTCP:3001 -sTCP:LISTEN 2>/dev/null); [ -n \"$pids\" ] && kill -9 $pids && echo \"Freed port 3001 (PIDs: $pids)\" || echo \"Port 3001 already free\"'",
     "dev": "concurrently -k -n web,api -c cyan,magenta \"npm run dev -w frontend\" \"npm run dev -w backend\"",
     "dev:web": "npm run dev -w frontend",
     "dev:api": "npm run dev -w backend",

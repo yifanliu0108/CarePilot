@@ -15,6 +15,11 @@ import {
   getCloudSession,
 } from "./browserUseCloud.js";
 import { buildGroceryPriceTask } from "./groceryCloudTask.js";
+import {
+  assistWithGemini,
+  assistWithGeminiNutrition,
+  geminiConfigured,
+} from "./geminiAssist.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildDailyMealPlan } from "./mealPlan.js";
@@ -250,11 +255,22 @@ app.post("/api/journey/assist", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`CarePilot API listening on http://localhost:${PORT}`);
   console.log(
     geminiConfigured()
       ? "Gemini: enabled (GEMINI_API_KEY loaded)"
       : "Gemini: disabled — copy backend/.env.example to backend/.env and set GEMINI_API_KEY",
   );
+});
+
+server.on("error", (err) => {
+  if (err?.code === "EADDRINUSE") {
+    console.error(
+      `CarePilot API: port ${PORT} is already in use. Stop the other server on that port (e.g. \`lsof -i :${PORT}\` then kill the PID), or set PORT in backend/.env to a free port and match frontend/vite proxy if you change it.`,
+    );
+  } else {
+    console.error("CarePilot API: server failed to start:", err?.message ?? err);
+  }
+  process.exit(1);
 });
