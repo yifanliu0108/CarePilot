@@ -1,12 +1,4 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// npm run dev from repo root uses cwd = monorepo root; load backend/.env explicitly.
-dotenv.config({ path: path.join(__dirname, "../../.env") });
-dotenv.config({ path: path.join(__dirname, "../.env"), override: true });
-
+import "./loadEnv.js";
 import cors from "cors";
 import express from "express";
 import {
@@ -14,6 +6,7 @@ import {
   createCloudSession,
   getCloudSession,
 } from "./browserUseCloud.js";
+import { buildCarePlacesTask } from "./careCloudTask.js";
 import { buildGroceryPriceTask } from "./groceryCloudTask.js";
 import {
   assistWithGemini,
@@ -25,11 +18,26 @@ import { nutritionAssist } from "./nutritionAssist.js";
 import { buildDailyMealPlan } from "./mealPlan.js";
 import { createSession, getSession, updateProfile } from "./sessionStore.js";
 import { computeBmi } from "./profileDefaults.js";
+import {
+  geocodeAddress,
+  nearbyGrocery,
+  placesConfigured,
+  searchCareFacilities,
+} from "./googlePlaces.js";
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 
-app.use(cors({ origin: ["http://localhost:5173", "http://127.0.0.1:5173"] }));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:5174",
+    ],
+  }),
+);
 app.use(express.json());
 
 function sessionIdFromReq(req) {
@@ -46,6 +54,7 @@ app.get("/api/health", (_req, res) => {
     service: "carepilot-backend",
     geminiConfigured: geminiConfigured(),
     browserUseConfigured: cloudConfigured(),
+    placesConfigured: placesConfigured(),
   });
 });
 
@@ -147,13 +156,87 @@ app.get("/api/journey/gemini-status", (_req, res) => {
   res.json({ configured: geminiConfigured() });
 });
 
+/** Whether Google Maps Platform key is set (server-side; never expose the key). */
+app.get("/api/journey/places-status", (_req, res) => {
+  res.json({ configured: placesConfigured() });
+});
+
+app.post("/api/places/geocode", async (req, res) => {
+  if (!placesConfigured()) {
+    res.status(503).json({ error: "GOOGLE_MAPS_API_KEY not configured on server" });
+    return;
+  }
+  const address = req.body?.address;
+  if (typeof address !== "string" || !address.trim()) {
+    res.status(400).json({ error: "body.address (non-empty string) required" });
+    return;
+  }
+  try {
+    const r = await geocodeAddress(address.trim());
+    res.json(r);
+  } catch (e) {
+    const status =
+      e.statusCode && e.statusCode >= 400 && e.statusCode < 600 ? e.statusCode : 500;
+    res.status(status).json({ error: e.message ?? "Geocoding failed" });
+  }
+});
+
+app.post("/api/places/nearby-grocery", async (req, res) => {
+  if (!placesConfigured()) {
+    res.status(503).json({ error: "GOOGLE_MAPS_API_KEY not configured on server" });
+    return;
+  }
+  const lat = Number(req.body?.lat);
+  const lng = Number(req.body?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    res.status(400).json({ error: "body.lat and body.lng (numbers) required" });
+    return;
+  }
+  const rm = req.body?.radiusMeters;
+  try {
+    const r = await nearbyGrocery(lat, lng, {
+      radiusMeters: typeof rm === "number" && Number.isFinite(rm) ? rm : undefined,
+    });
+    res.json(r);
+  } catch (e) {
+    const status =
+      e.statusCode && e.statusCode >= 400 && e.statusCode < 600 ? e.statusCode : 500;
+    res.status(status).json({ error: e.message ?? "Nearby grocery search failed" });
+  }
+});
+
+app.post("/api/places/care-facilities", async (req, res) => {
+  if (!placesConfigured()) {
+    res.status(503).json({ error: "GOOGLE_MAPS_API_KEY not configured on server" });
+    return;
+  }
+  const lat = Number(req.body?.lat);
+  const lng = Number(req.body?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    res.status(400).json({ error: "body.lat and body.lng (numbers) required" });
+    return;
+  }
+  const raw = req.body?.intent;
+  const intent =
+    raw === "urgent" || raw === "hospital" || raw === "emergency" ? raw : "emergency";
+  try {
+    const r = await searchCareFacilities(lat, lng, intent);
+    res.json(r);
+  } catch (e) {
+    const status =
+      e.statusCode && e.statusCode >= 400 && e.statusCode < 600 ? e.statusCode : 500;
+    res.status(status).json({ error: e.message ?? "Care facility search failed" });
+  }
+});
+
 /**
  * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
  * Body: { task: string, model?: string } — maps to v2 `llm` — or —
- * { grocery: { userMessage?, priceCheckItems?, nutritionSummary? }, model?: string }
+ * { grocery: ... } | { care: { userMessage?, context? } } | { task: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
   const g = req.body?.grocery;
+  const care = req.body?.care;
   let task;
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
@@ -163,13 +246,21 @@ app.post("/api/journey/cloud-task", async (req, res) => {
         : [],
       nutritionSummary:
         typeof g.nutritionSummary === "string" ? g.nutritionSummary : "",
+      nearbyStoreHints: Array.isArray(g.nearbyStoreHints)
+        ? g.nearbyStoreHints.map((x) => String(x ?? "").trim()).filter(Boolean)
+        : [],
+    });
+  } else if (care && typeof care === "object") {
+    task = buildCarePlacesTask({
+      userMessage: typeof care.userMessage === "string" ? care.userMessage : "",
+      context: typeof care.context === "string" ? care.context : "",
     });
   } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
     task = req.body.task.trim();
   } else {
     res.status(400).json({
       error:
-        "body.task (non-empty string) required, or body.grocery object for Walmart/Vons/Ralphs price check",
+        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals / urgent care)",
     });
     return;
   }
@@ -282,6 +373,11 @@ const server = app.listen(PORT, () => {
     cloudConfigured()
       ? "Browser Use Cloud: enabled (BROWSER_USE_API_KEY or BROWSER_USE_CLOUD_API_KEY)"
       : "Browser Use Cloud: disabled — set BROWSER_USE_API_KEY in backend/.env (https://cloud.browser-use.com/settings)",
+  );
+  console.log(
+    placesConfigured()
+      ? "Google Maps: enabled (GOOGLE_MAPS_API_KEY — Places + Geocoding)"
+      : "Google Maps: disabled — set GOOGLE_MAPS_API_KEY in backend/.env for nearby grocery / care search",
   );
 });
 

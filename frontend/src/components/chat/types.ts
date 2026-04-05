@@ -2,6 +2,43 @@ import type { BrowserSession } from "./journeyTypes";
 
 export type ResourceLink = { label: string; url: string };
 
+export type GroceryPriceRow = {
+  store: string;
+  product: string;
+  price: string;
+  productUrl?: string;
+  /** Direct search-results URL so the user can re-run the search in one tap. */
+  searchUrl?: string;
+};
+
+export type GroceryQueryResult = { query: string; results: GroceryPriceRow[] };
+
+export type CarePlaceRow = {
+  name: string;
+  address?: string;
+  mapsUrl?: string;
+  rating?: string;
+  note?: string;
+  /** When from Google Maps nearby search (server-computed). */
+  distanceMeters?: number;
+};
+
+/** Structured Browser Use follow-up shown in the center chat. */
+export type BrowserRunPayload = {
+  kind: "grocery" | "care" | "generic" | "maps";
+  title: string;
+  subtitle?: string;
+  grocery?: GroceryQueryResult[];
+  /** Natural-language substitution ideas from the browser agent (if present in JSON). */
+  grocerySubstitutions?: string;
+  carePlaces?: CarePlaceRow[];
+  /** Google Maps API results (nearby grocery or care facilities). */
+  mapsContext?: "grocery" | "care";
+  mapsPlaces?: CarePlaceRow[];
+  mapsDisclaimer?: string;
+  rawText?: string;
+};
+
 export type RecommendationAction = {
   id: string;
   label: string;
@@ -17,6 +54,8 @@ export type AssistantChatMessage = {
   foodsToTry: string[];
   /** Curated links from the API (label + url). Section title comes from `titleForResourceLinks`. */
   resourceLinks: ResourceLink[];
+  /** Filled when a Browser Use task completes—rendered with clear sections in the chat card. */
+  browserRun?: BrowserRunPayload;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -37,6 +76,35 @@ export function assistantMessageFromApi(
     text: assistantText,
     foodsToTry,
     resourceLinks,
+  };
+}
+
+/** Assistant message for a completed Browser Use task (center chat). */
+export function assistantMessageFromBrowserRun(id: string, run: BrowserRunPayload): AssistantChatMessage {
+  const text = run.subtitle ? `${run.title}\n\n${run.subtitle}` : run.title;
+  return {
+    id,
+    role: "assistant",
+    text,
+    foodsToTry: [],
+    resourceLinks: [],
+    browserRun: run,
+  };
+}
+
+/** Google Maps nearby results posted into the chat thread. */
+export function assistantMessageFromMaps(
+  id: string,
+  run: BrowserRunPayload & { kind: "maps" },
+): AssistantChatMessage {
+  const text = run.subtitle ? `${run.title}\n\n${run.subtitle}` : run.title;
+  return {
+    id,
+    role: "assistant",
+    text,
+    foodsToTry: [],
+    resourceLinks: [],
+    browserRun: run,
   };
 }
 

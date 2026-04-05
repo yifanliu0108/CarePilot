@@ -12,7 +12,12 @@
  *
  * Optional:
  * - `BROWSER_USE_FLASH_MODE=false` — disable faster, less careful navigation (default: on for v2)
- * - `BROWSER_USE_LLM` — e.g. `browser-use-llm` or `gemini-flash-lite-latest` (cheaper/faster models)
+ * - `BROWSER_USE_LLM` — override the default fast model (default below if unset)
+ *
+ * Speed (defaults tuned for lower latency / cost per step):
+ * - Default LLM is `browser-use-llm` (lighter than Browser Use 2.0). Set `BROWSER_USE_LLM` to override.
+ * - `flash_mode` defaults on (disable with BROWSER_USE_FLASH_MODE=false).
+ * - Grocery: set `BROWSER_USE_GROCERY_FAST=1` to scan fewer chains (see groceryCloudTask.js).
  */
 
 const CLOUD_BASE = 'https://api.browser-use.com/api/v2'
@@ -49,6 +54,15 @@ function envFlashModeDefaultOn() {
   const v = process.env.BROWSER_USE_FLASH_MODE?.trim().toLowerCase()
   if (v === '0' || v === 'false' || v === 'no') return false
   return true
+}
+
+/** Lighter model = fewer $/step and usually faster turns (see legacy agent docs). */
+const DEFAULT_FAST_LLM = 'browser-use-llm'
+
+function resolveTaskLlm(opts = {}) {
+  const fromRoute = opts.model && String(opts.model).trim()
+  const fromEnv = process.env.BROWSER_USE_LLM?.trim()
+  return fromRoute || fromEnv || DEFAULT_FAST_LLM
 }
 
 /** v2 task terminal states (differs from v3 sessions, which use `idle` when done). */
@@ -136,11 +150,9 @@ export function normalizeCloudTaskView(raw) {
  * @param {{ model?: string }} [opts]
  */
 export async function createCloudSession(task, opts = {}) {
-  const llmFromEnv = process.env.BROWSER_USE_LLM?.trim()
   const body = {
     task,
-    ...(opts.model ? { llm: opts.model } : {}),
-    ...(llmFromEnv && !opts.model ? { llm: llmFromEnv } : {}),
+    llm: resolveTaskLlm(opts),
     ...(envFlashModeDefaultOn() ? { flash_mode: true } : {}),
   }
   const res = await fetch(`${CLOUD_BASE}/tasks`, {

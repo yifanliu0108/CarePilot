@@ -15,6 +15,8 @@ type RecommendationPanelProps = {
   runLoading: boolean;
   runDisabled: boolean;
   liveSummary?: ReactNode;
+  /** Shown at the top of the scroll area (e.g. Location & Maps) so it stays easy to find. */
+  sidebarTop?: ReactNode;
   children?: ReactNode;
 };
 
@@ -29,6 +31,7 @@ export function RecommendationPanel({
   runLoading,
   runDisabled,
   liveSummary,
+  sidebarTop,
   children,
 }: RecommendationPanelProps) {
   if (minimal) {
@@ -84,9 +87,9 @@ export function RecommendationPanel({
           Recommendation
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          Use the checkboxes to choose what you want the browser agent to work on. Only checked
-          items are included when you run a cloud session. Quick links in the chat stay available
-          anytime—this list is for automated browsing.
+          Check the steps you want, then Run selected. Results (prices, Maps links, etc.) are posted
+          in the main chat when the run finishes. Quick links in the chat stay available anytime—
+          this list drives Browser Use only.
         </p>
         <div className="mt-3">
           <SmartButton
@@ -112,6 +115,7 @@ export function RecommendationPanel({
       </div>
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-4 sm:px-5">
+        {sidebarTop ? <div className="pb-1">{sidebarTop}</div> : null}
         {actions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-3 py-6 text-center text-sm text-slate-500">
             No runnable steps yet. Send a message to get suggested steps here. Grocery price checks
