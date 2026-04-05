@@ -145,7 +145,7 @@ Then open the **frontend** URL in the browser, log in, and use Chat — confirm 
 
 **CLI (optional):** with [Railway CLI](https://docs.railway.com/develop/cli) installed and `railway login` + `railway link` from the repo root, run `FRONTEND_URL='https://…'` `./scripts/railway-set-cross-origin-env.sh` (see script comments).
 
-**“Application failed to respond”:** open **Deploy logs** for the failing service. Common causes: wrong **start** command, crash on boot, or nothing listening on **`PORT`**. The backend binds **`0.0.0.0`** + **`PORT`**; the frontend **`npm run start:frontend`** runs **`vite preview`** with **`preview.host`** / **`PORT`** in `vite.config.ts`. For **backend-only** deploys without `frontend/dist`, **`/`** redirects to **`/api/health`**. Set health checks to **`/api/health`** (backend) or **`/`** (frontend preview).
+**“Application failed to respond”** (Railway edge + Request ID): **Deploy logs** can look healthy while the browser URL fails — often you’re hitting the **frontend** hostname but reading **backend** logs (or the opposite). Note the **exact host** in the address bar. Test **`https://YOUR-BACKEND-HOST/api/health`**; JSON means the API is up. Use **HTTP Logs** on the service that matches the failing URL. In **Settings → Deploy**, point the **health check** at **`/api/health`** or **`/`** (API-only images return **200** JSON on **`/`** when there is no SPA). Common causes: wrong **start** command, crash on boot, or nothing on **`PORT`**. Frontend: **`npm run start:frontend`** + successful **build**. Backend: listens on **`0.0.0.0:$PORT`**.
 
 ### Other hosts (Render, Fly, etc.)
 

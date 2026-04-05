@@ -485,8 +485,14 @@ if (process.env.SERVE_SPA !== "0" && existsSync(spaIndex)) {
   });
   console.log(`Serving SPA from ${staticDist}`);
 } else {
+  // API-only image: return 200 on `/` so platform health checks (often GET `/`) pass.
+  // A 302-only root can mark the deploy unhealthy even when `/api/health` works.
   app.get("/", (_req, res) => {
-    res.redirect(302, "/api/health");
+    res.status(200).json({
+      ok: true,
+      service: "carepilot-backend",
+      detail: "/api/health",
+    });
   });
 }
 
