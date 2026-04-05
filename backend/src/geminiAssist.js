@@ -8,6 +8,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { coerceMealPlanUpdate } from "./mealPlanFromChat.js";
+import { normalizeGeminiApiKeyString } from "./geminiNormalizeKey.js";
 import { retryAsync, isRetryableGeminiError } from "./geminiRetry.js";
 import { retrieveRagContext } from "./rag/rag.js";
 import { buildUserContextBlock } from "./userContextBlock.js";
@@ -218,8 +219,24 @@ mealPlanUpdate: When ANY turn in the thread mentions how they feel, symptoms, or
 
 If asked which AI model you are, say honestly: CarePilot using Google Gemini via the app backend; the configured model id appears below. Output must follow the JSON schema; browserSession is suggested steps and https links only (no logins).`;
 
+/** Resolved key after normalize (BOM / quotes). Use for all Gemini calls. */
+export function getGeminiApiKey() {
+  return normalizeGeminiApiKeyString(process.env.GEMINI_API_KEY);
+}
+
+/** Safe for /api/health — never returns the secret. */
+export function geminiKeyDiagnostics() {
+  const k = getGeminiApiKey();
+  return {
+    configured: k.length > 0,
+    keyLength: k.length,
+    /** Google AI Studio keys usually start with AIza and are ~39 chars */
+    looksLikeGoogleApiKey: /^AIza[\w-]{35,}$/.test(k),
+  };
+}
+
 export function geminiConfigured() {
-  return Boolean(process.env.GEMINI_API_KEY?.trim());
+  return getGeminiApiKey().length > 0;
 }
 
 function defaultModel() {
@@ -454,7 +471,7 @@ export function normalizeAssistPayload(parsed) {
  * @returns {Promise<{ intent: string, assistantText: string, browserSession: object }>}
  */
 export async function assistWithGemini(message, history, userContextSession = null) {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
   }
@@ -510,7 +527,7 @@ function nutritionExistingSyncHint(profile) {
  * @param {{ username?: string | null, profile?: object | null } | null} [userContextSession]
  */
 export async function assistWithGeminiNutrition(message, history, userContextSession = null) {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not set");
   }

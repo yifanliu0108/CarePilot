@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   apiFetch,
+  apiUrl,
   clearStoredSessionId,
   getStoredSessionId,
   setStoredSessionId,
@@ -57,7 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (username: string, email: string) => {
-      const r = await fetch("/api/auth/login", {
+      const r = await fetch(apiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email }),

@@ -32,9 +32,14 @@ try {
 
 const corpusSha256 = createHash("sha256").update(corpusRaw).digest("hex");
 
-function ragDisabled() {
+/** True when RAG_DISABLED=1|true|yes — no embedding or retrieval. Exposed for /api/health. */
+export function ragDisabledByEnv() {
   const v = process.env.RAG_DISABLED?.trim().toLowerCase();
   return v === "1" || v === "true" || v === "yes";
+}
+
+function ragDisabled() {
+  return ragDisabledByEnv();
 }
 
 function embeddingCacheDisabled() {

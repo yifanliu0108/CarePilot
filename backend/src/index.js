@@ -1,6 +1,12 @@
 import "./loadEnv.js";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import {
   cloudConfigured,
   createCloudSession,
@@ -12,8 +18,10 @@ import {
   assistWithGemini,
   assistWithGeminiNutrition,
   geminiConfigured,
+  geminiKeyDiagnostics,
 } from "./geminiAssist.js";
-import { ragFeatureEnabled } from "./rag/rag.js";
+import { formatGeminiErrorForClient } from "./geminiRetry.js";
+import { ragDisabledByEnv, ragFeatureEnabled } from "./rag/rag.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildMealPlanForApi } from "./mealPlan.js";
@@ -29,15 +37,24 @@ import {
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
+/** Railway/Docker: must listen on all interfaces, not only localhost. */
+const HOST = process.env.HOST ?? "0.0.0.0";
 
-app.use(
-  cors({
-    origin: [
+/** Local dev + optional production origins (comma-separated), e.g. https://myapp.fly.dev */
+const corsOrigins = process.env.CORS_ORIGINS?.trim()
+  ? process.env.CORS_ORIGINS.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
+  : [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
       "http://localhost:5174",
       "http://127.0.0.1:5174",
-    ],
+    ];
+
+app.use(
+  cors({
+    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
   }),
 );
 app.use(express.json());
@@ -55,7 +72,10 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     service: "carepilot-backend",
     geminiConfigured: geminiConfigured(),
+    geminiKey: geminiKeyDiagnostics(),
     ragEnabled: ragFeatureEnabled(),
+    /** When true, RAG_DISABLED is set — embeddings/retrieval are off; chat still uses Gemini. */
+    ragDisabledByEnv: ragDisabledByEnv(),
     browserUseConfigured: cloudConfigured(),
     placesConfigured: placesConfigured(),
   });
@@ -379,7 +399,7 @@ app.post("/api/journey/assist", async (req, res) => {
           res.status(503).json({
             error: timedOut
               ? "Request timed out"
-              : e?.message ?? "Gemini request failed",
+              : formatGeminiErrorForClient(e),
             detail: timedOut
               ? "Try a shorter message or raise GEMINI_REQUEST_TIMEOUT_MS in backend/.env."
               : "Fix the API key/model or try again; mock planner is not used when GEMINI_API_KEY is set.",
@@ -412,7 +432,7 @@ app.post("/api/journey/assist", async (req, res) => {
         res.status(503).json({
           error: timedOut
             ? "Request timed out"
-            : e?.message ?? "Gemini request failed",
+            : formatGeminiErrorForClient(e),
           detail: timedOut
             ? "Try a shorter message or raise GEMINI_REQUEST_TIMEOUT_MS in backend/.env."
             : "Fix the API key/model or try again; mock nutrition planner is not used when GEMINI_API_KEY is set.",
@@ -433,8 +453,38 @@ app.post("/api/journey/assist", async (req, res) => {
   }
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`CarePilot API listening on http://localhost:${PORT}`);
+/** Built Vite app (production). Override with STATIC_DIST=/abs/path. */
+function resolveStaticDist() {
+  const override = process.env.STATIC_DIST?.trim();
+  if (override) return path.resolve(override);
+  return path.join(__dirname, "../../frontend/dist");
+}
+
+const staticDist = resolveStaticDist();
+const spaIndex = path.join(staticDist, "index.html");
+if (process.env.SERVE_SPA !== "0" && existsSync(spaIndex)) {
+  app.use(
+    express.static(staticDist, {
+      fallthrough: true,
+      index: false,
+    }),
+  );
+  app.get("*", (req, res) => {
+    if (req.path.startsWith("/api")) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.sendFile(spaIndex);
+  });
+  console.log(`Serving SPA from ${staticDist}`);
+} else {
+  app.get("/", (_req, res) => {
+    res.redirect(302, "/api/health");
+  });
+}
+
+const server = app.listen(PORT, HOST, () => {
+  console.log(`CarePilot API listening on http://${HOST}:${PORT}`);
   console.log(
     geminiConfigured()
       ? "Gemini: enabled (GEMINI_API_KEY loaded)"

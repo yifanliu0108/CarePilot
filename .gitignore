@@ -16,6 +16,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!**/.env.example
 
 # RAG embedding cache (regenerated from corpus + model)
 backend/src/rag/embeddings-cache.json

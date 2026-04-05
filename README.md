@@ -75,6 +75,59 @@ npm run build
 
 Output: `frontend/dist/`.
 
+## Deployment (API keys optional)
+
+The backend can serve the built SPA from `frontend/dist` when `index.html` is present (same origin as `/api`). **Gemini, Maps, and Browser Use are optional** — without keys the app uses mock planners and offline flows.
+
+### Docker
+
+From the repo root (requires Docker):
+
+```bash
+docker build -t carepilot .
+docker run --rm -p 3001:3001 -e PORT=3001 carepilot
+```
+
+Open http://localhost:3001 — UI + `/api` on one port.
+
+**Public URL:** set `CORS_ORIGINS` to your site origin (comma-separated), e.g. `-e CORS_ORIGINS=https://myapp.fly.dev`. For same-origin (this Docker pattern) you often only need CORS when the browser origin differs from the API.
+
+**Custom static path:** `STATIC_DIST=/path/to/dist` (defaults to `frontend/dist` relative to the repo layout).
+
+**Disable SPA:** `SERVE_SPA=0` to serve API only (use a reverse proxy for static files).
+
+### Railway
+
+**Option A — one service (simplest):** One Railway service from this repo: **build** `npm ci && npm run build`, **start** `npm start`. The server serves the SPA and `/api` on the same URL; no extra env for API routing.
+
+**Option B — separate frontend + backend services:** Use the **repo root** as the working directory for both services.
+
+| Service | Build command | Start command |
+|--------|----------------|---------------|
+| **Backend** | `npm ci` (or include `npm run build` if you need the SPA files on the same container) | `npm start` |
+| **Frontend** | `npm ci && npm run build` | **`npm run start:frontend`** (runs `vite preview` on **`0.0.0.0:$PORT`**) |
+
+If the **frontend** service used **`npm start` at the repo root**, it would start the **backend**, not the UI — and the UI service would look “dead”. The frontend **must** use **`npm run start:frontend`** (or `npm run start -w frontend`) after a successful build.
+
+Set on the **frontend** service (build-time / Vite):
+
+- `VITE_API_BASE_URL` = your backend public URL, e.g. `https://carepilot-backend-production.up.railway.app` (no trailing slash). Redeploy the frontend after setting.
+
+On the **backend** service, set **`CORS_ORIGINS`** to your **frontend** public URL (comma-separated if several), e.g. `https://carepilot-frontend-production.up.railway.app`, so the browser may call the API cross-origin.
+
+Then open the **frontend** URL in the browser, log in, and use Chat — confirm **`/api/health`** on the backend URL returns JSON.
+
+**CLI (optional):** with [Railway CLI](https://docs.railway.com/develop/cli) installed and `railway login` + `railway link` from the repo root, run `FRONTEND_URL='https://…'` `./scripts/railway-set-cross-origin-env.sh` (see script comments).
+
+**“Application failed to respond”:** open **Deploy logs** for the failing service. Common causes: wrong **start** command, crash on boot, or nothing listening on **`PORT`**. The backend binds **`0.0.0.0`** + **`PORT`**; the frontend **`npm run start:frontend`** runs **`vite preview`** with **`preview.host`** / **`PORT`** in `vite.config.ts`. For **backend-only** deploys without `frontend/dist`, **`/`** redirects to **`/api/health`**. Set health checks to **`/api/health`** (backend) or **`/`** (frontend preview).
+
+### Other hosts (Render, Fly, etc.)
+
+1. Build command: `npm ci && npm run build`  
+2. Start command: `npm start` (runs the backend workspace `start` script)  
+3. Railway and most platforms set `PORT` automatically.  
+4. Optional AI/maps keys when ready: `GEMINI_API_KEY`, `GOOGLE_MAPS_API_KEY`, `BROWSER_USE_API_KEY`, etc.
+
 ## Branching
 
 Typical split: feature branches that touch only `frontend/` or only `backend/` merge cleanly when APIs are agreed (paths under `/api/...`, JSON shapes). Keep shared contract notes in PR descriptions or a short doc when you add real endpoints.

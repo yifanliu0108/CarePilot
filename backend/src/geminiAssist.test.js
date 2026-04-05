@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { formatGeminiErrorForClient } from "./geminiRetry.js";
 import {
   normalizeAssistPayload,
   buildGeminiContents,
@@ -87,4 +88,54 @@ test("normalizeAssistPayload repairs bad action URLs", () => {
   });
   assert.ok(r.browserSession.id.startsWith("sess-"));
   assert.match(r.browserSession.actions[0].url, /^https:\/\//);
+});
+
+test("formatGeminiErrorForClient maps API_KEY_INVALID JSON to a short user message", () => {
+  const raw = JSON.stringify({
+    error: {
+      code: 400,
+      message: "API key not valid. Please pass a valid API key.",
+      status: "INVALID_ARGUMENT",
+      details: [
+        {
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          reason: "API_KEY_INVALID",
+          domain: "googleapis.com",
+        },
+      ],
+    },
+  });
+  const out = formatGeminiErrorForClient({ message: raw });
+  assert.match(out, /Gemini API key/i);
+  assert.ok(out.length < 500);
+  assert.ok(!out.includes('"error"'));
+});
+
+test("formatGeminiErrorForClient PERMISSION_DENIED is not mislabeled as invalid key", () => {
+  const raw = JSON.stringify({
+    error: {
+      code: 403,
+      message: "Requests from this IP address are not allowed.",
+      status: "PERMISSION_DENIED",
+    },
+  });
+  const out = formatGeminiErrorForClient({ message: raw });
+  assert.ok(!/^Gemini API key is missing/i.test(out));
+  assert.match(out, /IP address|Cloud Console|Generative Language API/i);
+});
+
+test("formatGeminiErrorForClient 429 explains dashboard vs per-minute limits and includes Google hint", () => {
+  const raw = JSON.stringify({
+    error: {
+      code: 429,
+      message:
+        "You exceeded generate_content_free_tier_requests for model gemini-2.5-flash.",
+      status: "RESOURCE_EXHAUSTED",
+    },
+  });
+  const out = formatGeminiErrorForClient({ message: raw });
+  assert.match(out, /429|RESOURCE_EXHAUSTED/i);
+  assert.match(out, /generate_content_free_tier|Google says/i);
+  assert.match(out, /RAG_DISABLED=1/);
+  assert.match(out, /rate-limits/);
 });
