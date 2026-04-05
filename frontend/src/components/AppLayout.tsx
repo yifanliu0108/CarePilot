@@ -1,5 +1,5 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { useSession } from "../context/SessionContext";
+import { NavLink, Outlet } from "react-router-dom";
+import { useSession } from "../context/useSession";
 import { Logo } from "./Logo";
 
 type Tab = { to: string; label: string; end?: boolean };

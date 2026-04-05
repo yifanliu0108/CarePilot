@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Logo } from "../components/Logo";
-import { useSession } from "../context/SessionContext";
+import { useSession } from "../context/useSession";
 
 export default function LoginPage() {
   const { sessionId, login } = useSession();
@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="cp-auth">
+    <div className="cp-auth cp-auth--enter">
       <div className="cp-auth__card">
         <h1 className="cp-auth__title cp-auth__title--logo">
           <Logo variant="hero" />
