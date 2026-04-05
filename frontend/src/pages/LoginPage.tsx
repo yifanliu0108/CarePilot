@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Logo } from "../components/Logo";
-import { useSession } from "../context/SessionContext";
+import { useSession } from "../context/useSession";
 
 export default function LoginPage() {
   const { sessionId, login } = useSession();

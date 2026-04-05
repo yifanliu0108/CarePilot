@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BodyUnitToggles } from "../components/BodyUnitToggles";
-import { useSession } from "../context/SessionContext";
+import { useSession } from "../context/useSession";
 import {
   formatHeightDisplay,
   formatWeightDisplay,

@@ -9,7 +9,6 @@ import {
 } from "./browserUseCloud.js";
 import { buildCarePlacesTask } from "./careCloudTask.js";
 import { buildGroceryPriceTask } from "./groceryCloudTask.js";
-import { buildWalmartCartTask } from "./walmartCartTask.js";
 import {
   assistWithGemini,
   assistWithGeminiNutrition,
@@ -238,12 +237,15 @@ app.post("/api/places/care-facilities", async (req, res) => {
 /**
  * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
  * Body: { task: string, model?: string } — maps to v2 `llm` — or —
- * { grocery: ... } | { care: ... } | { walmartCart: { mealTitle?, items } } | { task: string }
+ * { grocery: ... } | { care: ... } | { task: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
   const g = req.body?.grocery;
   const care = req.body?.care;
-  const w = req.body?.walmartCart;
+  /** @type {{ model?: string, startUrl?: string, maxSteps?: number, highlightElements?: boolean, flashMode?: boolean, vision?: boolean | 'auto' }} */
+  const cloudOpts = {
+    model: typeof req.body?.model === "string" ? req.body.model : undefined,
+  };
   let task;
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
@@ -262,32 +264,17 @@ app.post("/api/journey/cloud-task", async (req, res) => {
       userMessage: typeof care.userMessage === "string" ? care.userMessage : "",
       context: typeof care.context === "string" ? care.context : "",
     });
-  } else if (w && typeof w === "object") {
-    const items = Array.isArray(w.items) ? w.items : [];
-    if (items.length === 0) {
-      res.status(400).json({
-        error: "body.walmartCart.items (non-empty string array) required",
-      });
-      return;
-    }
-    task = buildWalmartCartTask({
-      mealTitle: typeof w.mealTitle === "string" ? w.mealTitle : "",
-      items,
-      useLoggedInProfile: Boolean(getBrowserUseProfileId()),
-    });
   } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
     task = req.body.task.trim();
   } else {
     res.status(400).json({
       error:
-        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals), or body.walmartCart (Walmart cart helper)",
+        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals)",
     });
     return;
   }
   try {
-    const session = await createCloudSession(task, {
-      model: typeof req.body?.model === "string" ? req.body.model : undefined,
-    });
+    const session = await createCloudSession(task, cloudOpts);
     res.json(session);
   } catch (e) {
     const status =

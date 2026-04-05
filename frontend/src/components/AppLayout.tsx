@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { useSession } from "../context/SessionContext";
+import { useSession } from "../context/useSession";
 import { Logo } from "./Logo";
 
 type Tab = { to: string; label: string; end?: boolean };
@@ -9,7 +9,6 @@ const tabs: Tab[] = [
   { to: "/input", label: "Health input" },
   { to: "/chat", label: "Chat" },
   { to: "/plan", label: "Meal plan" },
-  { to: "/shop-recipe", label: "Shop recipe" },
 ];
 
 export default function AppLayout() {

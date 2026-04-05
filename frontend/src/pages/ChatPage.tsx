@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
@@ -148,8 +147,6 @@ const WELCOME_TEXT =
   "Hi—I'm CarePilot. Ask about food for sleep, focus, digestion, muscles and joints, or immunity—say how you feel or use your saved health snapshot. When there's a plan, check steps on the right and tap Run selected; answers come back here.";
 
 export default function ChatPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
     assistantMessageFromApi("welcome", WELCOME_TEXT, null),
   ]);
@@ -228,21 +225,6 @@ export default function ChatPage() {
       .catch(() => setMapsConfigured(false));
   }, []);
 
-  useEffect(() => {
-    const st = location.state as
-      | { shopRecipeDraft?: string }
-      | null
-      | undefined;
-    const draftText = st?.shopRecipeDraft;
-    if (typeof draftText !== "string" || !draftText.trim()) return;
-    setDraft(draftText.trim());
-    navigate(location.pathname, { replace: true, state: {} });
-    const raf = window.requestAnimationFrame(() => {
-      document.getElementById("cp-guardian-input")?.focus();
-    });
-    return () => window.cancelAnimationFrame(raf);
-  }, [location.key, location.pathname, navigate]);
-
   useEffect(
     () => () => {
       if (cloudPollRef.current) {
@@ -264,7 +246,7 @@ export default function ChatPage() {
     return nearbyGroceryPlaces.map((p) => p.name.trim()).filter(Boolean);
   }
 
-  function useMyLocation() {
+  function requestBrowserLocation() {
     if (!navigator.geolocation) {
       setMapsError("Location is not available in this browser.");
       return;
@@ -668,7 +650,7 @@ export default function ChatPage() {
             loading={mapsLoading}
             error={mapsError}
             locationLabel={locationLabel}
-            onUseMyLocation={() => useMyLocation()}
+            onUseMyLocation={() => requestBrowserLocation()}
             address={addressInput}
             onAddressChange={setAddressInput}
             onSearchAddress={() => void searchAddressToCoords()}

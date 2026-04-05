@@ -7,7 +7,6 @@ import InputPage from "./pages/InputPage";
 import LoginPage from "./pages/LoginPage";
 import PlanPage from "./pages/PlanPage";
 import ProfilePage from "./pages/ProfilePage";
-import ShopRecipePage from "./pages/ShopRecipePage";
 import "./carepilot.css";
 
 export default function App() {
@@ -21,7 +20,6 @@ export default function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="plan" element={<PlanPage />} />
-          <Route path="shop-recipe" element={<ShopRecipePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

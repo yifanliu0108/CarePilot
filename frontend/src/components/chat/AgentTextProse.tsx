@@ -71,11 +71,11 @@ function lineToBlocks(lines: string[]): Block[] {
       continue;
     }
 
-    if (/^\d+[\).]\s+/.test(t)) {
+    if (/^\d+[).]\s+/.test(t)) {
       const items: string[] = [];
       while (i < lines.length) {
         const L = lines[i].trim();
-        const num = L.match(/^\d+[\).]\s+(.+)$/);
+        const num = L.match(/^\d+[).]\s+(.+)$/);
         if (num) {
           items.push(num[1]);
           i += 1;
@@ -119,9 +119,14 @@ export function AgentTextProse({
       : "space-y-3 text-sm leading-relaxed text-slate-700 [&_strong]:text-slate-900";
 
   if (looksLikeJson(trimmed)) {
+    let jsonPretty: string | null = null;
     try {
       const parsed = JSON.parse(trimmed);
-      const pretty = JSON.stringify(parsed, null, 2);
+      jsonPretty = JSON.stringify(parsed, null, 2);
+    } catch {
+      /* fall through to markdown path */
+    }
+    if (jsonPretty !== null) {
       return (
         <div
           className={`rounded-xl border border-slate-200 bg-slate-50/90 p-4 ${className}`}
@@ -130,12 +135,10 @@ export function AgentTextProse({
             Structured data
           </p>
           <pre className="max-h-56 overflow-auto font-mono text-[12px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">
-            {pretty}
+            {jsonPretty}
           </pre>
         </div>
       );
-    } catch {
-      /* fall through */
     }
   }
 
