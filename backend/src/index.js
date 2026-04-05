@@ -4,6 +4,7 @@ import express from "express";
 import {
   cloudConfigured,
   createCloudSession,
+  getBrowserUseProfileId,
   getCloudSession,
 } from "./browserUseCloud.js";
 import { buildCarePlacesTask } from "./careCloudTask.js";
@@ -54,6 +55,7 @@ app.get("/api/health", (_req, res) => {
     service: "carepilot-backend",
     geminiConfigured: geminiConfigured(),
     browserUseConfigured: cloudConfigured(),
+    browserUseProfileConfigured: Boolean(getBrowserUseProfileId()),
     placesConfigured: placesConfigured(),
   });
 });
@@ -166,7 +168,10 @@ app.get("/api/me/meal-plan", (req, res) => {
 
 /** Whether Browser Use Cloud API key is set (never expose the key to the client). */
 app.get("/api/journey/cloud-status", (_req, res) => {
-  res.json({ configured: cloudConfigured() });
+  res.json({
+    configured: cloudConfigured(),
+    profileConfigured: Boolean(getBrowserUseProfileId()),
+  });
 });
 
 /** Whether Gemini API key is set (never expose the key to the client). */
@@ -250,11 +255,15 @@ app.post("/api/places/care-facilities", async (req, res) => {
 /**
  * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
  * Body: { task: string, model?: string } — maps to v2 `llm` — or —
- * { grocery: ... } | { care: { userMessage?, context? } } | { task: string }
+ * { grocery: ... } | { care: ... } | { task: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
   const g = req.body?.grocery;
   const care = req.body?.care;
+  /** @type {{ model?: string, startUrl?: string, maxSteps?: number, highlightElements?: boolean, flashMode?: boolean, vision?: boolean | 'auto' }} */
+  const cloudOpts = {
+    model: typeof req.body?.model === "string" ? req.body.model : undefined,
+  };
   let task;
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
@@ -278,14 +287,12 @@ app.post("/api/journey/cloud-task", async (req, res) => {
   } else {
     res.status(400).json({
       error:
-        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals / urgent care)",
+        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals)",
     });
     return;
   }
   try {
-    const session = await createCloudSession(task, {
-      model: typeof req.body?.model === "string" ? req.body.model : undefined,
-    });
+    const session = await createCloudSession(task, cloudOpts);
     res.json(session);
   } catch (e) {
     const status =
