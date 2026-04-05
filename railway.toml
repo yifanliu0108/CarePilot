@@ -1,7 +1,7 @@
-# Prefer Nixpacks/Railpack when there is no root Dockerfile.
-# If you use Docker per service, set Dockerfile path:
-#   carepilot-frontend → Dockerfile.frontend
-#   carepilot-backend    → Dockerfile.backend
+# Default when a service does not use a Dockerfile. Each service overrides independently:
+# Settings → Build → Builder → Docker → Dockerfile path = Dockerfile.frontend | Dockerfile.backend
+# If you pick Docker + a Dockerfile for that service, Railway builds the image (not Railpack).
+# Railpack/Nixpacks only apply to services that do not use a Dockerfile.
 
 [build]
 builder = "nixpacks"
