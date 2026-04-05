@@ -38,6 +38,17 @@ export default function AppLayout() {
             </NavLink>
           ))}
         </nav>
+        <p className="cp-sidebar__gemini">
+          <span className="cp-sidebar__gemini-kicker">Assistant</span>
+          <a
+            className="cp-sidebar__gemini-link"
+            href="https://ai.google.dev/gemini-api"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Google Gemini
+          </a>
+        </p>
         <div className="cp-sidebar__foot">
           {sessionId ? (
             <>

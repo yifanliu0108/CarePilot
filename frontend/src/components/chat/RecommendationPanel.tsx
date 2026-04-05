@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { ActionItem } from "./ActionItem";
+import { BrowserPlanOverview } from "./BrowserPlanOverview";
 import { SmartButton } from "./SmartButton";
+import type { BrowserSession } from "./journeyTypes";
 import type { RecommendationAction } from "./types";
 
 type RecommendationPanelProps = {
@@ -8,6 +10,11 @@ type RecommendationPanelProps = {
   minimal?: boolean;
   liveLoading?: boolean;
   liveError?: string | null;
+  /** Gemini structured browser plan (shown above the checklist). */
+  plan?: BrowserSession | null;
+  planIntent?: string | null;
+  /** While true, overview shows a skeleton instead of stale plan data. */
+  planLoading?: boolean;
   actions: RecommendationAction[];
   checkedIds: Set<string>;
   onToggle: (id: string) => void;
@@ -24,6 +31,9 @@ export function RecommendationPanel({
   minimal = false,
   liveLoading = false,
   liveError = null,
+  plan = null,
+  planIntent = null,
+  planLoading = false,
   actions,
   checkedIds,
   onToggle,
@@ -47,8 +57,8 @@ export function RecommendationPanel({
             </p>
             <p className="mt-3 text-sm font-medium text-slate-600">Waiting for a plan</p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              Chat on the left first. When the assistant returns steps or a browser task, this panel
-              opens so you can run them in the cloud.
+              Chat on the left first. When the assistant returns a plan, use <strong className="text-slate-600">Run selected</strong>{" "}
+              here so we execute in the cloud—not just suggest.
             </p>
             {liveLoading ? (
               <p
@@ -87,9 +97,10 @@ export function RecommendationPanel({
           Recommendation
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          Check the steps you want, then Run selected. Results (prices, Maps links, etc.) are posted
-          in the main chat when the run finishes. Quick links in the chat stay available anytime—
-          this list drives Browser Use only.
+          <strong className="font-semibold text-slate-700">Suggest → execute:</strong> check the steps
+          you want, then <strong className="font-semibold text-slate-700">Run selected</strong>. Results
+          (prices, Maps links, etc.) post in the main chat when the run finishes. Quick links in the chat
+          stay available anytime—this list drives Browser Use only.
         </p>
         <div className="mt-3">
           <SmartButton
@@ -116,6 +127,13 @@ export function RecommendationPanel({
 
       <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-4 py-4 sm:px-5">
         {sidebarTop ? <div className="pb-1">{sidebarTop}</div> : null}
+        {planLoading || plan ? (
+          <BrowserPlanOverview
+            live={planLoading ? null : plan}
+            intent={planIntent}
+            loading={planLoading}
+          />
+        ) : null}
         {actions.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-3 py-6 text-center text-sm text-slate-500">
             No runnable steps yet. Send a message to get suggested steps here. Grocery price checks

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
 import { useSession } from "../context/SessionContext";
 import { ChatWindow } from "../components/chat/ChatWindow";
-import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
+import { CloudRunStatus } from "../components/chat/CloudRunStatus";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
 import type {
   BrowserSession,
@@ -146,7 +146,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi! I'm your CarePilot nutrition assistant\n\nAsk about food for sleep, focus, digestion, muscles/joints, or immunity. Share your symptoms or use your profile to get a meal plan (it syncs to your weekly view when signed in).";
+  "Hi! I'm your CarePilot nutrition assistant.\n\nAsk about food for sleep, focus, digestion, muscles/joints, or immunity. I don't just suggest—I return a plan you can run: when you see steps in the side panel, check what you want and tap “Run selected” so Browser Use Cloud can execute in a real browser (add BROWSER_USE_API_KEY on the server). Your profile and meal plan stay in sync when you're signed in.";
 
 export default function ChatPage() {
   const { refreshMe, sessionId } = useSession();
@@ -171,6 +171,7 @@ export default function ChatPage() {
   );
   const [cloudActive, setCloudActive] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
+  const [journeyIntent, setJourneyIntent] = useState<string | null>(null);
   const [mapsConfigured, setMapsConfigured] = useState(false);
   const [mapsLoading, setMapsLoading] = useState(false);
   const [mapsError, setMapsError] = useState<string | null>(null);
@@ -532,6 +533,7 @@ export default function ChatPage() {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
+    setJourneyIntent(null);
     lastPatientMessageRef.current = text;
 
     const history = messages
@@ -570,6 +572,12 @@ export default function ChatPage() {
       }
       const asst = assistantMessageFromApi(makeId(), reply, browserSession);
       setMessages((m) => [...m, asst]);
+      const intentRaw = (data as { intent?: string }).intent;
+      setJourneyIntent(
+        typeof intentRaw === "string" && intentRaw.trim()
+          ? intentRaw.trim()
+          : null,
+      );
       if (browserSession) setLive(browserSession);
       else setLive(null);
       const nextActions = buildRecommendationActions(
@@ -580,6 +588,7 @@ export default function ChatPage() {
       setActions(nextActions);
       setCheckedIds(new Set());
     } catch (e) {
+      setJourneyIntent(null);
       const msg = e instanceof Error ? e.message : "Request failed";
       setLiveError(msg);
       const errText = `Could not reach the planner (${msg}). Is the API running on port 3001?`;
@@ -631,7 +640,36 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="cp-chat-layout cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div className="cp-chat-page-root flex min-h-0 flex-1 flex-col">
+      <div
+        className="cp-execute-banner"
+        role="region"
+        aria-label="How CarePilot goes from chat to action"
+      >
+        <p className="cp-execute-banner__head">
+          <strong>Suggest → execute</strong>
+          <span className="cp-execute-banner__sep" aria-hidden>
+            ·
+          </span>
+          <span className="cp-execute-banner__text">
+            Chat for ideas, then use <strong>Live actions</strong> → <strong>Run selected</strong> to run
+            your plan in the cloud browser—not just read advice.
+          </span>
+        </p>
+        <p className="cp-execute-banner__gemini">
+          Assistant reasoning uses{" "}
+          <a
+            href="https://ai.google.dev/gemini-api"
+            target="_blank"
+            rel="noreferrer"
+            className="cp-execute-banner__link"
+          >
+            Google Gemini
+          </a>
+          .
+        </p>
+      </div>
+      <div className="cp-chat-layout cp-chat-page-bg flex min-h-0 flex-1 flex-col lg:flex-row">
       <ChatWindow
         className="lg:min-w-0 lg:flex-[3] lg:max-w-none"
         listRef={listRef}
@@ -657,6 +695,9 @@ export default function ChatPage() {
         minimal={browserPanelMinimal}
         liveLoading={liveLoading}
         liveError={liveError}
+        plan={liveLoading ? null : live}
+        planIntent={journeyIntent}
+        planLoading={liveLoading}
         actions={actions}
         checkedIds={checkedIds}
         onToggle={toggleChecked}
@@ -693,19 +734,6 @@ export default function ChatPage() {
           />
         }
       >
-        {cloudActive && !cloudSession ? (
-          <div
-            className="flex items-center gap-2 rounded-xl border border-cp-sage-200 bg-cp-sage-50 px-3 py-2.5 text-sm text-cp-sage-900"
-            role="status"
-            aria-live="polite"
-          >
-            <span
-              className="size-4 shrink-0 animate-spin rounded-full border-2 border-cp-sage-300 border-t-cp-dust-700"
-              aria-hidden
-            />
-            <span className="font-medium">Connecting to Browser Use…</span>
-          </div>
-        ) : null}
         {live?.note ? (
           <p className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
             {live.note}
@@ -731,71 +759,14 @@ export default function ChatPage() {
             </div>
           </div>
         ) : null}
-        {cloudError ? (
-          <p
-            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-            role="alert"
-          >
-            Cloud: {cloudError}
-          </p>
-        ) : null}
-        {cloudSession ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-            <p className="text-xs text-slate-600">
-              Task{" "}
-              <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">
-                {cloudSession.id.slice(0, 8)}…
-              </code>
-              {" · "}
-              <span className="font-medium text-slate-800">
-                {cloudSession.status}
-              </span>
-              {` · ${cloudSession.stepCount} step${cloudSession.stepCount === 1 ? "" : "s"}`}
-              {isCloudRunning(cloudSession) ? (
-                <span className="ml-1.5 inline-flex items-center gap-1 text-cp-dust-700">
-                  <span
-                    className="size-1.5 animate-pulse rounded-full bg-cp-dust-500"
-                    aria-hidden
-                  />
-                  running
-                </span>
-              ) : null}
-            </p>
-            {cloudSession.lastStepSummary ? (
-              <p className="mt-2 text-xs text-slate-600">
-                {cloudSession.lastStepSummary}
-              </p>
-            ) : null}
-            {cloudSession.liveUrl ? (
-              <>
-                <a
-                  className="mt-2 inline-block text-sm font-semibold text-cp-dust-700 underline-offset-2 hover:underline"
-                  href={cloudSession.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open live browser (new tab)
-                </a>
-                <iframe
-                  className="mt-2 h-48 w-full rounded-lg border border-slate-200"
-                  title="Browser Use Cloud live view"
-                  src={cloudSession.liveUrl}
-                  sandbox="allow-scripts allow-same-origin allow-popups"
-                />
-              </>
-            ) : null}
-            {!isCloudRunning(cloudSession) ? (
-              <p className="mt-2 text-[11px] text-slate-500">
-                A formatted copy is also in the chat thread above.
-              </p>
-            ) : null}
-            <CloudTaskOutput
-              output={cloudSession.output}
-              status={cloudSession.status}
-            />
-          </div>
-        ) : null}
+        <CloudRunStatus
+          connecting={cloudActive && !cloudSession}
+          session={cloudSession}
+          error={cloudError}
+          sessionRunning={cloudSession ? isCloudRunning(cloudSession) : false}
+        />
       </RecommendationPanel>
+      </div>
     </div>
   );
 }

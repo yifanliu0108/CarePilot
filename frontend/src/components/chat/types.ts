@@ -43,6 +43,8 @@ export type RecommendationAction = {
   id: string;
   label: string;
   type: "task";
+  /** Step order from Gemini browserSession.steps (for numbered checklist UI). */
+  stepOrder?: number;
 };
 
 export type UserChatMessage = { id: string; role: "user"; text: string };

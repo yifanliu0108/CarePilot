@@ -54,9 +54,11 @@ function SubhealthScoreRing({
           />
         </svg>
         <div className="cp-quick__signal-ring-center">
-          <span className="cp-quick__signal-pct">{p}</span>
-          <span className="cp-quick__signal-pct-unit" aria-hidden>
-            %
+          <span className="cp-quick__signal-ring-value">
+            <span className="cp-quick__signal-pct">{p}</span>
+            <span className="cp-quick__signal-pct-unit" aria-hidden>
+              %
+            </span>
           </span>
         </div>
       </div>

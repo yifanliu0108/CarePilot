@@ -7,6 +7,29 @@ Monorepo layout so the team can branch around **frontend** and **backend** separ
 | `frontend/`  | Vite + React + TypeScript (CarePilot UI)                     |
 | `backend/`   | Node + Express API (Gemini assist + Browser Use Cloud proxy)   |
 
+## Product story: we don’t just suggest—we execute
+
+CarePilot is built around a **suggest → execute** loop:
+
+1. **Chat** — The assistant reasons about nutrition and next steps (powered by **Google Gemini** when `GEMINI_API_KEY` is set).
+2. **Plan** — Replies include structured **steps and links** (browser session) you can act on.
+3. **Execute** — In **Chat → Live actions**, select steps and tap **Run selected** so **Browser Use Cloud** runs a real browser task (prices, public resources, etc.). Results stream back into the chat.
+
+Judges and users should see: advice is not the end state—**execution in the browser** is.
+
+### Demo script (~3 minutes)
+
+1. **Health input** or **Quick check** — show personalization.
+2. **Chat** — Ask one concrete question (e.g. foods for sleep and recovery).
+3. Point to the **banner**: “Suggest → execute” + **Google Gemini** attribution.
+4. When the assistant returns a browser plan, open **Live actions**, check steps, **Run selected** (requires `BROWSER_USE_API_KEY`).
+5. Show the **result** in the chat thread—close the loop out loud: *“That’s not a PDF—it’s a run.”*
+
+### Sponsor tracks (MLH / Gemini)
+
+- **Google Gemini API**: Journey assist and nutrition flows call Gemini via the backend; the UI links to [Gemini API](https://ai.google.dev/gemini-api) on the chat page and in the sidebar.
+- **Best Interactive AI**: Multi-turn chat, structured plans, and the **Run selected** path make the interaction visible—not a black box.
+
 ## Setup
 
 From the **repo root**:

@@ -208,8 +208,10 @@ export default function InputPage() {
         </header>
 
         <form className="cp-form cp-form--wide" onSubmit={(e) => void onSubmit(e)}>
-        <fieldset className="cp-form__fieldset">
-          <legend className="cp-form__legend">Body metrics</legend>
+        <fieldset className="cp-form__fieldset" aria-labelledby="input-section-body">
+          <h2 className="cp-form__section-title" id="input-section-body">
+            Body metrics
+          </h2>
           <div className="cp-form__unit-row">
             <span className="cp-form__unit-label" id="input-body-units-label">
               Units
@@ -221,82 +223,112 @@ export default function InputPage() {
               labelledBy="input-body-units-label"
             />
           </div>
-          <div className="cp-form__row">
-            <label className="cp-form__label">
-              Age
-              <input
-                className="cp-form__input"
-                type="number"
-                min={1}
-                max={120}
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="e.g. 34"
-              />
-            </label>
-            <label className="cp-form__label">
-              {weightKgMode ? "Weight (kg)" : "Weight (lb)"}
-              <input
-                className="cp-form__input"
-                type="number"
-                step="0.1"
-                min={weightKgMode ? 1 : 2}
-                value={weightInput}
-                onChange={(e) => setWeightInput(e.target.value)}
-                placeholder={weightKgMode ? "e.g. 72" : "e.g. 160"}
-              />
-            </label>
-          </div>
           {heightCmMode ? (
-            <label className="cp-form__label">
-              Height (cm)
-              <input
-                className="cp-form__input"
-                type="number"
-                step="0.1"
-                min={50}
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                placeholder="e.g. 172"
-              />
-            </label>
-          ) : (
-            <div className="cp-form__row">
+            <div className="cp-form__row cp-form__row--metrics-3">
               <label className="cp-form__label">
-                Height (ft)
+                Age
                 <input
                   className="cp-form__input"
                   type="number"
-                  step="1"
-                  min={3}
-                  max={8}
-                  value={ft}
-                  onChange={(e) => setFt(e.target.value)}
+                  min={1}
+                  max={120}
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="e.g. 34"
                 />
               </label>
               <label className="cp-form__label">
-                Height (in)
+                {weightKgMode ? "Weight (kg)" : "Weight (lb)"}
                 <input
                   className="cp-form__input"
                   type="number"
                   step="0.1"
-                  min={0}
-                  max={11.99}
-                  value={inch}
-                  onChange={(e) => setInch(e.target.value)}
+                  min={weightKgMode ? 1 : 2}
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  placeholder={weightKgMode ? "e.g. 72" : "e.g. 160"}
+                />
+              </label>
+              <label className="cp-form__label">
+                Height (cm)
+                <input
+                  className="cp-form__input"
+                  type="number"
+                  step="0.1"
+                  min={50}
+                  value={heightCm}
+                  onChange={(e) => setHeightCm(e.target.value)}
+                  placeholder="e.g. 172"
                 />
               </label>
             </div>
+          ) : (
+            <>
+              <div className="cp-form__row">
+                <label className="cp-form__label">
+                  Age
+                  <input
+                    className="cp-form__input"
+                    type="number"
+                    min={1}
+                    max={120}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    placeholder="e.g. 34"
+                  />
+                </label>
+                <label className="cp-form__label">
+                  {weightKgMode ? "Weight (kg)" : "Weight (lb)"}
+                  <input
+                    className="cp-form__input"
+                    type="number"
+                    step="0.1"
+                    min={weightKgMode ? 1 : 2}
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    placeholder={weightKgMode ? "e.g. 72" : "e.g. 160"}
+                  />
+                </label>
+              </div>
+              <div className="cp-form__row">
+                <label className="cp-form__label">
+                  Height (ft)
+                  <input
+                    className="cp-form__input"
+                    type="number"
+                    step="1"
+                    min={3}
+                    max={8}
+                    value={ft}
+                    onChange={(e) => setFt(e.target.value)}
+                  />
+                </label>
+                <label className="cp-form__label">
+                  Height (in)
+                  <input
+                    className="cp-form__input"
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    max={11.99}
+                    value={inch}
+                    onChange={(e) => setInch(e.target.value)}
+                  />
+                </label>
+              </div>
+            </>
           )}
-          <p className="cp-form__hint">
+          <p className="cp-form__hint cp-form__bmi-preview">
             BMI (preview):{" "}
             <strong>{bmiPreview != null ? bmiPreview : "—"}</strong>
             {bmiPreview != null ? " (also sent to the server from height & weight)" : ""}
           </p>
         </fieldset>
 
-        <fieldset className="cp-form__fieldset">
-          <legend className="cp-form__legend">Subhealth focus</legend>
+        <fieldset className="cp-form__fieldset" aria-labelledby="input-section-subhealth">
+          <h2 className="cp-form__section-title" id="input-section-subhealth">
+            Subhealth focus
+          </h2>
           <p className="cp-rating__lede">
             Rate each area from <strong>1</strong> (minimal) to <strong>5</strong> (strong focus or
             bother). Meal plans treat <strong>3+</strong> as an active concern.

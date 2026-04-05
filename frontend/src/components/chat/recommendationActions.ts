@@ -14,6 +14,7 @@ export function buildRecommendationActions(
         id: `step-${live.id}-${s.order}`,
         label: s.description,
         type: "task",
+        stepOrder: s.order,
       });
     }
   } else {
