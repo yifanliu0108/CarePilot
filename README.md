@@ -69,8 +69,10 @@ npm run dev:api
 
 ## Build
 
+There is **no** root `npm run build` script — it made Railway’s **backend** service run the **frontend** Vite build by mistake. Build the UI workspace explicitly:
+
 ```bash
-npm run build
+npm run build:web
 ```
 
 Output: `frontend/dist/`.
@@ -114,7 +116,7 @@ Open http://localhost:3001 — UI + `/api` on one port.
 
 ### Railway
 
-**Option A — one service (simplest):** One Railway service from this repo: **build** `npm ci && npm run build`, **start** `npm start`. The server serves the SPA and `/api` on the same URL; no extra env for API routing.
+**Option A — one service (simplest):** One Railway service from this repo: **build** `npm ci && npm run build:web`, **start** `npm start`. The server serves the SPA and `/api` on the same URL; no extra env for API routing.
 
 **Option B — separate frontend + backend services:** Use the **repo root** as the working directory for both services. If **`npm ci` runs out of memory (exit 137)** on Railway, use **scoped installs** so each service skips the other workspace’s heavy deps:
 
@@ -124,6 +126,10 @@ Open http://localhost:3001 — UI + `/api` on one port.
 | **Frontend** | `npm ci --workspace=carepilot-frontend --no-audit --no-fund && npm run build -w carepilot-frontend` | **`npm run start:frontend`** (runs `vite preview` on **`0.0.0.0:$PORT`**) |
 
 The repo includes **`railway.toml`** so Railway uses **Nixpacks** instead of **Docker** by default (Dockerfile was causing OOM during full `npm ci`). Override the **Build command** in the dashboard with the rows above if the default install still fails.
+
+**Vite “Node 20.19+” / `CustomEvent is not defined`:** Railpack must use Node **20.19+** (this repo targets **22** via **`engines`**, **`.nvmrc`**, and **`nixpacks.toml`**). If logs still show **Node 18**, add a service variable **`NODE_VERSION`** = **`22`** (or **`NIXPACKS_NODE_VERSION`** = **`22`**).
+
+**Backend running `vite build`:** Do not use a root **`npm run build`** for the backend — the root no longer defines **`build`** so Railpack won’t compile the frontend on the API service. Backend **build command** should stay install-only, e.g. `npm ci --workspace=carepilot-backend --no-audit --no-fund`.
 
 If the **frontend** service used **`npm start` at the repo root**, it would start the **backend**, not the UI — and the UI service would look “dead”. The frontend **must** use **`npm run start:frontend`** (or `npm run start -w frontend`) after a successful build.
 
@@ -141,7 +147,7 @@ Then open the **frontend** URL in the browser, log in, and use Chat — confirm 
 
 ### Other hosts (Render, Fly, etc.)
 
-1. Build command: `npm ci && npm run build`  
+1. Build command: `npm ci && npm run build:web`  
 2. Start command: `npm start` (runs the backend workspace `start` script)  
 3. Railway and most platforms set `PORT` automatically.  
 4. Optional AI/maps keys when ready: `GEMINI_API_KEY`, `GOOGLE_MAPS_API_KEY`, `BROWSER_USE_API_KEY`, etc.

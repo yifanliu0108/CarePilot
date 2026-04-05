@@ -1,0 +1,3 @@
+# Railpack/Nixpacks: Vite 8 needs Node 20.19+ (see frontend toolchain).
+[variables]
+NIXPACKS_NODE_VERSION = "22"
