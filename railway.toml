@@ -1,7 +1,11 @@
-# Default when a service does not use a Dockerfile. Each service overrides independently:
-# Settings → Build → Builder → Docker → Dockerfile path = Dockerfile.frontend | Dockerfile.backend
-# If you pick Docker + a Dockerfile for that service, Railway builds the image (not Railpack).
-# Railpack/Nixpacks only apply to services that do not use a Dockerfile.
+# Railway config-as-code for the single-service deployment path.
+# This makes the backend service build the SPA and then serve both UI + /api.
 
 [build]
-builder = "nixpacks"
+builder = "RAILPACK"
+buildCommand = "npm run build:web"
+
+[deploy]
+startCommand = "npm start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
