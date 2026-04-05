@@ -1,4 +1,4 @@
-import { mergeWeeklyPlansWithChat } from "./mealPlanFromChat.js";
+import { mergeRollingWeekWithChat } from "./mealPlanFromChat.js";
 
 /**
  * Daily meal plan from full health snapshot:
@@ -383,6 +383,31 @@ function addDaysIso(isoDateStr, days) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Local calendar date YYYY-MM-DD (avoids UTC drift from toISOString). */
+function todayIsoLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysIsoLocal(isoDateStr, days) {
+  const d = new Date(`${isoDateStr}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${da}`;
+}
+
+const SHORT_DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function dayLabelFromIsoLocal(iso) {
+  const d = new Date(`${iso}T12:00:00`);
+  return SHORT_DOW[d.getDay()];
+}
+
 /**
  * @param {import('./profileDefaults.js').HealthProfile} profile
  * @param {{ dayOffset?: number }} [options] — 0–6 varies template picks for weekly variety
@@ -511,17 +536,36 @@ export function buildWeeklyMealPlans(profile) {
 }
 
 /**
+ * Seven consecutive local days starting **today** (index 0 = today), through today+6.
+ * Same weekday appears again only when today+6 lands on that weekday (e.g. Sunday → following Saturday).
+ * @param {import('./profileDefaults.js').HealthProfile} profile
+ */
+export function buildRollingWeekMealPlans(profile) {
+  const start = todayIsoLocal();
+  const week = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDaysIsoLocal(start, i);
+    const dayPlan = buildDailyMealPlan(profile, { dayOffset: i });
+    const { date: _omit, ...rest } = dayPlan;
+    week.push({
+      dayIndex: i,
+      dayLabel: dayLabelFromIsoLocal(date),
+      date,
+      ...rest,
+    });
+  }
+  return week;
+}
+
+/**
  * Daily plan for API + `weeklyPlans` (merged with chat overlay when present).
  * @param {import('./profileDefaults.js').HealthProfile} profile
  */
 export function buildMealPlanForApi(profile) {
-  let weeklyPlans = buildWeeklyMealPlans(profile);
-  weeklyPlans = mergeWeeklyPlansWithChat(weeklyPlans, profile.chatMealPlanContext);
+  let weeklyPlans = buildRollingWeekMealPlans(profile);
+  weeklyPlans = mergeRollingWeekWithChat(weeklyPlans, profile.chatMealPlanContext);
 
-  const now = new Date();
-  const dow = now.getDay();
-  const mondayIndex = dow === 0 ? 6 : dow - 1;
-  const todayPlan = weeklyPlans[mondayIndex] ?? buildDailyMealPlan(profile);
+  const todayPlan = weeklyPlans[0] ?? buildDailyMealPlan(profile);
 
   const ctx = profile?.chatMealPlanContext;
   const chatMealPlanContext =

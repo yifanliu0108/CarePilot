@@ -184,7 +184,7 @@ export default function QuickCheckPage() {
   /** Brief “selected” state with checkmark before advancing (16p-style) */
   const [selectedRisk, setSelectedRisk] = useState<number | null>(null);
   const pickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** True while user chose “Retake” so we do not auto-open the profile snapshot over the quiz. */
+  /** True while user chose “Retake” so we do not auto-open the subhealth report over the quiz. */
   const retakeFlowRef = useRef(false);
 
   useEffect(() => {
@@ -385,7 +385,7 @@ export default function QuickCheckPage() {
                   Try <Link to="/input">Health input</Link> or start the check again.
                 </>
               ) : (
-                <>Run the 2-minute check to see your subhealth snapshot here.</>
+                <>Run the 2-minute check to see your subhealth report here.</>
               )}
             </p>
             <button type="button" className="cp-btn cp-btn--primary" onClick={beginRetake}>
@@ -412,7 +412,7 @@ export default function QuickCheckPage() {
         <div className="cp-page__inner cp-quick cp-quick--snapshot">
           <header className="cp-quick__snapshot-head">
             <p className="cp-quick__eyebrow">Quick check</p>
-            <h1 className="cp-quick__snapshot-title">Your subhealth snapshot</h1>
+            <h1 className="cp-quick__snapshot-title">Your subhealth report</h1>
             <p className="cp-quick__snapshot-lede">
               {serverOk ? (
                 <>
@@ -598,7 +598,7 @@ export default function QuickCheckPage() {
                       className="cp-btn cp-btn--secondary"
                       onClick={() => setPhase("snapshot")}
                     >
-                      Back to overview
+                      Back to report
                     </button>
                     <button type="button" className="cp-btn cp-btn--secondary" onClick={beginRetake}>
                       Retake quick check
@@ -614,7 +614,7 @@ export default function QuickCheckPage() {
                 </>
               ) : (
                 <>
-                  {saving ? <p className="cp-quick__saving">Saving your snapshot…</p> : null}
+                  {saving ? <p className="cp-quick__saving">Saving your report…</p> : null}
                   {!saving ? (
                     <>
                       <p className="cp-quick__result-cta-lede cp-quick__result-cta-lede--signed">
@@ -628,7 +628,7 @@ export default function QuickCheckPage() {
                           className="cp-btn cp-btn--secondary"
                           onClick={() => setPhase("snapshot")}
                         >
-                          Back to overview
+                          Back to report
                         </button>
                         <button type="button" className="cp-btn cp-btn--primary" onClick={beginRetake}>
                           Retake quick check
@@ -730,7 +730,7 @@ export default function QuickCheckPage() {
               className="cp-quick__symptom-skip-link"
               onClick={() => void finish(answers, [])}
             >
-              Skip to snapshot
+              Skip to results
             </button>
           </div>
 

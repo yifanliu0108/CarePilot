@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../api/session";
 
@@ -118,6 +118,8 @@ export default function PlanPage() {
   const [payload, setPayload] = useState<MealPlanApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const weekListRef = useRef<HTMLDivElement>(null);
+  const dayDetailsRefs = useRef<Record<string, HTMLDetailsElement | null>>({});
 
   const todayStr = useMemo(() => todayIsoLocal(), []);
 
@@ -139,6 +141,39 @@ export default function PlanPage() {
       cancelled = true;
     };
   }, []);
+
+  const week = useMemo(() => {
+    if (!payload?.weeklyPlans || payload.weeklyPlans.length !== 7) return null;
+    return payload.weeklyPlans;
+  }, [payload]);
+
+  /** Same planner blurb is often repeated for every day — show once to cut scroll fatigue. */
+  const sharedWeekSummary = useMemo(() => {
+    if (!week?.length) return null;
+    const s0 = week[0].summary?.trim() ?? "";
+    if (!s0) return null;
+    return week.every((d) => (d.summary?.trim() ?? "") === s0) ? s0 : null;
+  }, [week]);
+
+  function focusWeekDay(date: string) {
+    const el = dayDetailsRefs.current[date];
+    if (!el) return;
+    el.open = true;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }
+
+  function expandCollapseWeek(expand: boolean) {
+    const root = weekListRef.current;
+    if (!root) return;
+    root.querySelectorAll("details.cp-plan__week-section").forEach((node) => {
+      if (node instanceof HTMLDetailsElement) node.open = expand;
+    });
+    if (!expand) {
+      const todayEl = dayDetailsRefs.current[todayStr];
+      if (todayEl) todayEl.open = true;
+    }
+  }
 
   if (loading) {
     return (
@@ -165,7 +200,6 @@ export default function PlanPage() {
     );
   }
 
-  const week = payload.weeklyPlans?.length === 7 ? payload.weeklyPlans : null;
   const chat = payload.chatMealPlanContext;
 
   return (
@@ -176,9 +210,9 @@ export default function PlanPage() {
           <p className="cp-page__sub">
             {week ? (
               <>
-                Seven days starting Monday of this week. Built from your <strong>Health input</strong> subhealth
-                scores and body metrics; nutrition <strong>chat</strong> can add symptom-aware tweaks and a full-week
-                overlay when you describe how you feel.
+                Seven days starting <strong>today</strong> through the next six days (local calendar). Built from your{" "}
+                <strong>Health input</strong> subhealth scores and body metrics; nutrition <strong>chat</strong> can
+                add symptom-aware tweaks and a full-week overlay when you describe how you feel.
               </>
             ) : (
               <>
@@ -215,6 +249,43 @@ export default function PlanPage() {
           </div>
         ) : null}
 
+        {week ? (
+          <>
+            <nav className="cp-plan__week-strip" aria-label="Jump to a day">
+              {week.map((day) => {
+                const isToday = day.date === todayStr;
+                return (
+                  <button
+                    key={day.date}
+                    type="button"
+                    className={
+                      "cp-plan__day-chip" + (isToday ? " cp-plan__day-chip--today" : "")
+                    }
+                    onClick={() => focusWeekDay(day.date)}
+                  >
+                    <span className="cp-plan__day-chip__dow">{day.dayLabel ?? "—"}</span>
+                    <span className="cp-plan__day-chip__date">{day.date.slice(5)}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="cp-plan__week-toolbar">
+              <button type="button" className="cp-plan__toolbar-btn" onClick={() => expandCollapseWeek(true)}>
+                Expand all days
+              </button>
+              <button type="button" className="cp-plan__toolbar-btn" onClick={() => expandCollapseWeek(false)}>
+                Collapse to today
+              </button>
+            </div>
+            {sharedWeekSummary ? (
+              <details className="cp-plan__rationale">
+                <summary className="cp-plan__rationale-summary">How this week&apos;s plan is built</summary>
+                <p className="cp-plan__summary cp-plan__summary--compact cp-plan__rationale-body">{sharedWeekSummary}</p>
+              </details>
+            ) : null}
+          </>
+        ) : null}
+
         {!week ? (
           <>
             <p className="cp-plan__summary">{payload.summary}</p>
@@ -249,11 +320,15 @@ export default function PlanPage() {
             <DayMealsGrid plan={payload} />
           </>
         ) : (
-          week.map((day) => {
+          <div ref={weekListRef}>
+          {week.map((day) => {
             const isToday = day.date === todayStr;
             return (
               <details
                 key={`${day.dayLabel}-${day.date}`}
+                ref={(el) => {
+                  dayDetailsRefs.current[day.date] = el;
+                }}
                 className="cp-plan__week-section"
                 open={isToday}
               >
@@ -261,7 +336,9 @@ export default function PlanPage() {
                   {day.dayLabel ?? "Day"} · {day.date}
                   {isToday ? <span className="cp-plan__today-badge"> Today</span> : null}
                 </summary>
-                <p className="cp-plan__summary cp-plan__summary--compact">{day.summary}</p>
+                {!sharedWeekSummary && day.summary ? (
+                  <p className="cp-plan__summary cp-plan__summary--compact">{day.summary}</p>
+                ) : null}
                 {day.topFoods && day.topFoods.length > 0 ? (
                   <section className="cp-card cp-card--tight" aria-labelledby={`foods-${day.date}`}>
                     <h2 id={`foods-${day.date}`} className="cp-card__title">
@@ -299,7 +376,8 @@ export default function PlanPage() {
                 </section>
               </details>
             );
-          })
+          })}
+          </div>
         )}
 
         {!week ? (

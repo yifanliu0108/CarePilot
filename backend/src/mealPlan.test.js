@@ -76,10 +76,34 @@ test("BMI and age add body-metric bonuses", () => {
   assert.ok(p.summary.includes("Age 70"));
 });
 
-test("meal plan API bundles seven weekly days plus today slice", () => {
+function todayIsoLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+test("meal plan API bundles seven rolling days from today plus today slice", () => {
   const profile = { ...empty, symptomTagIds: [], chatMealPlanContext: null };
   const api = buildMealPlanForApi(profile);
   assert.equal(api.weeklyPlans.length, 7);
   assert.ok(api.date && api.meals?.breakfast);
   assert.equal(api.chatMealPlanContext, null);
+  const expectToday = todayIsoLocal();
+  assert.equal(api.weeklyPlans[0].date, expectToday);
+  assert.equal(api.date, expectToday);
+  const w = api.weeklyPlans;
+  for (let i = 1; i < 7; i++) {
+    const prev = new Date(`${w[i - 1].date}T12:00:00`);
+    const cur = new Date(`${w[i].date}T12:00:00`);
+    prev.setDate(prev.getDate() + 1);
+    assert.equal(
+      cur.getFullYear(),
+      prev.getFullYear(),
+      `year step ${i}`,
+    );
+    assert.equal(cur.getMonth(), prev.getMonth(), `month step ${i}`);
+    assert.equal(cur.getDate(), prev.getDate(), `day step ${i}`);
+  }
 });
