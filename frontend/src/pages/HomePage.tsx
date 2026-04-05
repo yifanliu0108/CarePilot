@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { HeroBackdrop } from "../components/HeroBackdrop";
 import { useSession } from "../context/useSession";
 
 export default function HomePage() {

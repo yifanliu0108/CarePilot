@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom";
 import { HeroBackdrop } from "../components/HeroBackdrop";
 import { apiFetch } from "../api/session";
-import { useSession, type HealthProfile } from "../context/SessionContext";
+import type { HealthProfile } from "../context/SessionContext";
+import { useSession } from "../context/useSession";
 import {
   buildPatternResult,
   detectPattern,

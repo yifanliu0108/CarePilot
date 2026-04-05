@@ -10,6 +10,8 @@ export type HealthProfile = {
   digestiveRating: number | null;
   musculoskeletalRating: number | null;
   immuneRating: number | null;
+  /** Optional quick-check symptom chip ids (mirrors API profile). */
+  symptomTagIds?: string[];
   completedOnboarding: boolean;
 };
 
