@@ -4,7 +4,7 @@ type StepDef = { id: JourneyPhase; label: string; hint: string };
 
 const STEPS: StepDef[] = [
   { id: "ask", label: "Chat", hint: "Describe your goal" },
-  { id: "plan", label: "Plan", hint: "Review Live actions" },
+  { id: "plan", label: "Plan", hint: "See Recommendation" },
   { id: "run", label: "Run", hint: "Cloud browser" },
   { id: "results", label: "Results", hint: "See chat + panel" },
 ];

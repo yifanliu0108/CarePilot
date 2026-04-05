@@ -24,6 +24,46 @@ function isCloudRunning(view: CloudSessionView): boolean {
   return cloudStatusStillRunning(view.status);
 }
 
+type AssistHttpError = { kind: "assist_http"; status: number; message: string };
+
+/** User-facing copy: distinguish Gemini key errors from “backend not running”. */
+function formatPlannerUserMessage(raw: string, httpStatus: number): string {
+  const lower = raw.toLowerCase();
+  let short = raw;
+  const trimmed = raw.trimStart();
+  if (trimmed.startsWith("{")) {
+    try {
+      const o = JSON.parse(raw) as { error?: { message?: string } };
+      if (typeof o?.error?.message === "string") short = o.error.message;
+    } catch {
+      /* keep raw */
+    }
+  }
+
+  const geminiKeyIssue =
+    lower.includes("api key") ||
+    lower.includes("api_key") ||
+    (lower.includes("expired") && lower.includes("key")) ||
+    lower.includes("generativelanguage") ||
+    lower.includes("invalid_argument");
+
+  if (geminiKeyIssue) {
+    return `Gemini: ${short}\n\nUpdate GEMINI_API_KEY in backend/.env with a current key from https://aistudio.google.com/apikey. The backend did respond—this is a Google API key issue, not a missing server on port 3001.`;
+  }
+
+  const offline =
+    httpStatus === 0 &&
+    (lower.includes("failed to fetch") ||
+      lower.includes("networkerror") ||
+      lower.includes("load failed"));
+
+  if (offline) {
+    return `Could not reach the planner (${short}). Start the backend on port 3001 (default), or set PORT in backend/.env and match the Vite proxy.`;
+  }
+
+  return `Could not reach the planner (${short}). Is the API running on port 3001?`;
+}
+
 function cloudField<T>(
   o: Record<string, unknown>,
   camel: string,
@@ -360,7 +400,13 @@ export default function ChatPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error((data as { error?: string }).error ?? res.statusText);
+        const errBody = data as { error?: string; detail?: string };
+        const message = [errBody.error, errBody.detail].filter(Boolean).join(" ");
+        throw {
+          kind: "assist_http" as const,
+          status: res.status,
+          message: message || res.statusText,
+        } satisfies AssistHttpError;
       }
       const assistantText = (data as { assistantText?: string }).assistantText;
       const browserSession = (data as { browserSession?: BrowserSession })
@@ -396,9 +442,22 @@ export default function ChatPage() {
     } catch (e) {
       setJourneyIntent(null);
       setRagSources(null);
-      const msg = e instanceof Error ? e.message : "Request failed";
+      let msg = "Request failed";
+      let status = 0;
+      if (
+        e &&
+        typeof e === "object" &&
+        "kind" in e &&
+        (e as AssistHttpError).kind === "assist_http"
+      ) {
+        const ae = e as AssistHttpError;
+        msg = ae.message;
+        status = ae.status;
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
       setLiveError(msg);
-      const errText = `Could not reach the planner (${msg}). Is the API running on port 3001?`;
+      const errText = formatPlannerUserMessage(msg, status);
       setMessages((m) => [
         ...m,
         assistantMessageFromApi(makeId(), errText, null),
@@ -461,7 +520,7 @@ export default function ChatPage() {
             ·
           </span>
           <span className="cp-execute-banner__text">
-            Chat for ideas, then use <strong>Live actions</strong> → <strong>Run selected</strong> to run
+            Chat for ideas, then use <strong>Recommendation</strong> → <strong>Run selected</strong> to run
             your plan in the cloud browser—not just read advice.
           </span>
         </p>
