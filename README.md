@@ -133,7 +133,9 @@ The repo includes **`railway.toml`** so Railway uses **Nixpacks** instead of **D
 
 If the **frontend** service used **`npm start` at the repo root**, it would start the **backend**, not the UI — and the UI service would look “dead”. The frontend **must** use **`npm run start:frontend`** (or `npm run start -w frontend`) after a successful build.
 
-**Deploy logs show `vite` on `localhost:5173`:** That is **dev** mode (`npm run dev`). Railway sends traffic to **`$PORT`** (often **8080**), so the app must listen on **`0.0.0.0:$PORT`** — `vite.config.ts` is set up for that. Prefer **production**: **Start** = **`npm run start:frontend`** (serves **`frontend/dist`** via **`vite preview`**), not **`npm run dev`** or **`npm run dev:web`**.
+**Deploy logs show `vite` on `localhost:5173`:** That is **dev** mode (`npm run dev`). Railway sends traffic to **`$PORT`** (often **8080**), so the app must listen on **`0.0.0.0:$PORT`**. Prefer **production**: **Start** = **`npm run start:frontend`**, which runs **`frontend/scripts/railway-static.mjs`** (Node-only static server for **`dist/`**). **`vite preview` is not used in production** — Vite is a **devDependency** and may be missing after `npm ci --omit=dev`, which shows up as **HTTP 502** in **HTTP Logs** with nothing obvious in Deploy logs.
+
+**HTTP Logs show 502 on `GET /`:** Usually the container is not serving **`dist`** (build missing) or the start command crashed. Confirm **Build** runs **`npm run build:web`** (or equivalent) and **Start** is **`npm run start:frontend`**, then check **Deploy logs** for `carepilot-frontend static` and `Missing frontend/dist` if the build never ran.
 
 Set on the **frontend** service (build-time / Vite):
 
