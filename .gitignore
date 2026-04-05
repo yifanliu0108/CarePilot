@@ -20,6 +20,7 @@ dist-ssr
 
 # RAG embedding cache (regenerated from corpus + model)
 backend/src/rag/embeddings-cache.json
+backend/data/
 
 # Local editor history backups
 .history/

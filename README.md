@@ -125,7 +125,7 @@ Open http://localhost:3001 — UI + `/api` on one port.
 | Service | Build command | Start command |
 |--------|----------------|---------------|
 | **Backend** | `npm ci --workspace=carepilot-backend --no-audit --no-fund` | `npm start` |
-| **Frontend** | `npm ci --workspace=carepilot-frontend --no-audit --no-fund && npm run build -w carepilot-frontend` | **`npm run start:frontend`** (runs `vite preview` on **`0.0.0.0:$PORT`**) |
+| **Frontend** | `npm ci --workspace=carepilot-frontend --no-audit --no-fund && npm run build -w carepilot-frontend` | **`npm run start:frontend`** (runs `frontend/scripts/railway-static.mjs` on **`0.0.0.0:$PORT`**) |
 
 The repo includes **`railway.toml`** so Railway uses **Nixpacks** instead of **Docker** by default (Dockerfile was causing OOM during full `npm ci`). Override the **Build command** in the dashboard with the rows above if the default install still fails.
 

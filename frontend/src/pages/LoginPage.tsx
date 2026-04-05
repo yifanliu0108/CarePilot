@@ -172,8 +172,9 @@ export default function LoginPage() {
           </form>
 
           <p className="cp-login__demo-note">
-            Demo: sessions live in server memory and clear when the API
-            restarts.
+            Demo: sign-in is passwordless. Profile data is stored on the backend
+            server and may reset if the app is redeployed or server storage is
+            cleared.
           </p>
         </div>
       </div>

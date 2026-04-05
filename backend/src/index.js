@@ -26,7 +26,12 @@ import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
 import { buildMealPlanForApi } from "./mealPlan.js";
 import { mergeStoredChatMealContext } from "./mealPlanFromChat.js";
-import { createSession, getSession, updateProfile } from "./sessionStore.js";
+import {
+  createSession,
+  deleteSession,
+  getSession,
+  updateProfile,
+} from "./sessionStore.js";
 import { computeBmi } from "./profileDefaults.js";
 import {
   geocodeAddress,
@@ -101,6 +106,12 @@ app.post("/api/auth/login", (req, res) => {
   }
   const sessionId = createSession(username, email);
   res.json({ sessionId, username: username.trim(), email: email.trim() });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  const sessionId = sessionIdFromReq(req);
+  if (sessionId) deleteSession(sessionId);
+  res.status(204).end();
 });
 
 app.get("/api/me", (req, res) => {

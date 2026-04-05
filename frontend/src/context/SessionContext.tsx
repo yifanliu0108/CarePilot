@@ -91,6 +91,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const logout = useCallback(() => {
+    void apiFetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     clearStoredSessionId();
     setSessionId(null);
     setMe(null);
