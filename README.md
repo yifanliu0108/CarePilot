@@ -133,6 +133,8 @@ The repo includes **`railway.toml`** so Railway uses **Nixpacks** instead of **D
 
 If the **frontend** service used **`npm start` at the repo root**, it would start the **backend**, not the UI — and the UI service would look “dead”. The frontend **must** use **`npm run start:frontend`** (or `npm run start -w frontend`) after a successful build.
 
+**Deploy logs show `vite` on `localhost:5173`:** That is **dev** mode (`npm run dev`). Railway sends traffic to **`$PORT`** (often **8080**), so the app must listen on **`0.0.0.0:$PORT`** — `vite.config.ts` is set up for that. Prefer **production**: **Start** = **`npm run start:frontend`** (serves **`frontend/dist`** via **`vite preview`**), not **`npm run dev`** or **`npm run dev:web`**.
+
 Set on the **frontend** service (build-time / Vite):
 
 - `VITE_API_BASE_URL` = your backend public URL, e.g. `https://carepilot-backend-production.up.railway.app` (no trailing slash). Redeploy the frontend after setting.

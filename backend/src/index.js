@@ -37,8 +37,15 @@ import {
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
-/** Railway/Docker: must listen on all interfaces, not only localhost. */
-const HOST = process.env.HOST ?? "0.0.0.0";
+/**
+ * Railway/Docker: bind 0.0.0.0 so the platform can reach the process.
+ * Some hosts set HOST=localhost — that only accepts loopback and breaks health checks.
+ */
+const rawHost = process.env.HOST?.trim();
+const HOST =
+  !rawHost || rawHost === "localhost" || rawHost === "127.0.0.1"
+    ? "0.0.0.0"
+    : rawHost;
 
 /** Local dev + optional production origins (comma-separated), e.g. https://myapp.fly.dev */
 const corsOrigins = process.env.CORS_ORIGINS?.trim()
