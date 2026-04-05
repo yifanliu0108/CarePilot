@@ -19,16 +19,18 @@ npm workspaces install dependencies for both packages (hoisted under the root `n
 
 ### Hackathon / team quickstart (Gemini)
 
-**Without a Gemini key, chat uses mock planners** — replies look repetitive and **are not** the real model. Each machine needs its own env file.
+**Why this matters:** The API key **never lives in Git** (it would be public and unsafe). So when someone clones the repo, they only get **`.env.example`** (no secret). Until they add a real key locally, the backend uses **built-in mock planners** — fixed rules, similar answers for everyone — **not** Google Gemini. That is why teammates “see the same custom answer” until they configure `.env`.
 
-1. Copy the template: **`cp backend/.env.example backend/.env`**
-2. Add **`GEMINI_API_KEY=`** from [Google AI Studio](https://aistudio.google.com/apikey) (one key per person, or **one shared team key** in a private Slack/Discord — **never commit it**).
-3. From the repo root: **`npm run dev`**
-4. Confirm the API terminal prints **`Gemini: enabled (GEMINI_API_KEY loaded)`**, or open **`http://localhost:3001/api/journey/gemini-status`** — you want **`"configured": true`**.
+**What the steps do:**
 
-The server loads **`backend/.env`** even when you run `npm run dev` from the repo root (a **`.env`** at the repo root also works). **Do not commit `backend/.env`.** After the event, rotate the key if it was pasted in a public channel.
+1. **`cp backend/.env.example backend/.env`** — Creates a **local** file Git ignores. Your key stays on your laptop only.
+2. **`GEMINI_API_KEY=...`** — Paste the key from [Google AI Studio](https://aistudio.google.com/apikey). Use **one key per person**, or for a hackathon share **one team key** in a **private** chat (Slack/Discord DM). **Never commit `backend/.env`.** If a key was ever posted publicly, create a new key in AI Studio and delete the old one.
+3. **`npm run dev`** — Starts Vite (UI) and the Express API. The API reads **`backend/.env`** on startup (it also looks for a **`.env`** at the **repo root** if you prefer one file for the whole project).
+4. **Check that Gemini is on** — In the terminal where the API runs, you should see **`Gemini: enabled (GEMINI_API_KEY loaded)`**. Or in a browser: **`http://localhost:3001/api/journey/gemini-status`** should return **`{"configured":true}`**. If it says **`configured: false`**, the key is missing, empty, or the server didn’t see the file — **restart** `npm run dev` after editing `.env`. Also ensure the backend is actually running on **port 3001** (otherwise the UI can’t reach the API).
 
-**Optional:** [Browser Use Cloud](https://cloud.browser-use.com/settings) — set **`BROWSER_USE_API_KEY`** in the same file (see `backend/.env.example`).
+**In the app:** With Gemini enabled, Live actions should show **`gemini`** (not **`mock`**) after you send a message. The chat subtitle also reflects whether the server sees a key.
+
+**Optional — Browser Use Cloud:** For automated browser sessions from the Live actions panel, add **`BROWSER_USE_API_KEY`** from [Browser Use Cloud settings](https://cloud.browser-use.com/settings) in the same **`backend/.env`** file (see `backend/.env.example`).
 
 ## Dev
 
