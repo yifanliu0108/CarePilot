@@ -4,7 +4,11 @@ import { useEffect, useRef } from "react";
  * Soft animated backdrop: gene-like node networks + drifting “whole food” dots.
  * Uses CarePilot palette (sage / gray-greens / muted red) — no extra theme deps.
  */
-export function LoginGeneFoodCanvas({ className = "" }: { className?: string }) {
+export function LoginGeneFoodCanvas({
+  className = "",
+}: {
+  className?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5 });
 
@@ -14,7 +18,9 @@ export function LoginGeneFoodCanvas({ className = "" }: { className?: string }) 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
     const onMove = (e: MouseEvent) => {
       mouseRef.current = {
@@ -91,13 +97,27 @@ export function LoginGeneFoodCanvas({ className = "" }: { className?: string }) 
       ctx.clearRect(0, 0, w, h);
 
       // Soft vignette + radial wells (food / vitality)
-      const g0 = ctx.createRadialGradient(w * 0.2 + mx, h * 0.85 + my, 0, w * 0.2, h * 0.85, h * 0.55);
+      const g0 = ctx.createRadialGradient(
+        w * 0.2 + mx,
+        h * 0.85 + my,
+        0,
+        w * 0.2,
+        h * 0.85,
+        h * 0.55,
+      );
       g0.addColorStop(0, "rgba(157, 206, 196, 0.12)");
       g0.addColorStop(1, "rgba(233, 239, 237, 0)");
       ctx.fillStyle = g0;
       ctx.fillRect(0, 0, w, h);
 
-      const g1 = ctx.createRadialGradient(w * 0.85 - mx, h * 0.15 - my, 0, w * 0.85, h * 0.15, h * 0.45);
+      const g1 = ctx.createRadialGradient(
+        w * 0.85 - mx,
+        h * 0.15 - my,
+        0,
+        w * 0.85,
+        h * 0.15,
+        h * 0.45,
+      );
       g1.addColorStop(0, "rgba(154, 91, 82, 0.08)");
       g1.addColorStop(1, "rgba(233, 239, 237, 0)");
       ctx.fillStyle = g1;
@@ -109,7 +129,12 @@ export function LoginGeneFoodCanvas({ className = "" }: { className?: string }) 
         const cx = f.fx * w + mx * 0.4 + Math.cos(t * 0.35 + f.seed) * 12;
         const cy = f.fy * h + my * 0.35 + bob;
         const rad = 22 + Math.sin(t * 1.1 + f.seed) * 4;
-        const fill = f.hue === "mint" ? colors.mint : f.hue === "berry" ? colors.berry : colors.sage;
+        const fill =
+          f.hue === "mint"
+            ? colors.mint
+            : f.hue === "berry"
+              ? colors.berry
+              : colors.sage;
         ctx.beginPath();
         ctx.arc(cx, cy, rad * 1.6, 0, Math.PI * 2);
         ctx.fillStyle = colors.glow;

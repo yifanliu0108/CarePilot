@@ -7,7 +7,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { HeroBackdrop } from "../components/HeroBackdrop";
 import { apiFetch } from "../api/session";
 import { useSession, type HealthProfile } from "../context/SessionContext";
@@ -171,6 +171,8 @@ function buildProfileBody(
 
 export default function QuickCheckPage() {
   const { me, refreshMe, sessionId, loading } = useSession();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [phase, setPhase] = useState<"snapshot" | "likert" | "symptoms" | "result">("likert");
@@ -187,11 +189,34 @@ export default function QuickCheckPage() {
   /** True while user chose “Retake” so we do not auto-open the subhealth report over the quiz. */
   const retakeFlowRef = useRef(false);
 
+  const resetToQuizStart = useCallback(() => {
+    retakeFlowRef.current = true;
+    setPhase("likert");
+    setStep(0);
+    setAnswers([]);
+    setSymptomStep(0);
+    setSelectedSymptomIds([]);
+    setRiskRow(null);
+    setScore(null);
+    setSavedSymptomIds([]);
+    setSaveError(null);
+    setSelectedRisk(null);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (pickTimerRef.current) clearTimeout(pickTimerRef.current);
     };
   }, []);
+
+  /** Landing “Start 2-min check” passes state so we open the quiz, not the saved subhealth report. */
+  useLayoutEffect(() => {
+    if (loading) return;
+    const st = location.state as { startQuiz?: boolean } | null | undefined;
+    if (!st?.startQuiz) return;
+    resetToQuizStart();
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [loading, location.pathname, location.state, navigate, resetToQuizStart]);
 
   useLayoutEffect(() => {
     if (loading) return;
@@ -238,17 +263,7 @@ export default function QuickCheckPage() {
   const total = QUICK_QUESTIONS.length;
 
   function beginRetake() {
-    retakeFlowRef.current = true;
-    setPhase("likert");
-    setStep(0);
-    setAnswers([]);
-    setSymptomStep(0);
-    setSelectedSymptomIds([]);
-    setRiskRow(null);
-    setScore(null);
-    setSavedSymptomIds([]);
-    setSaveError(null);
-    setSelectedRisk(null);
+    resetToQuizStart();
   }
 
   const finish = useCallback(

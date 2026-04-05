@@ -157,6 +157,20 @@
   justify-content: center;
 }
 
+.cp-sidebar__brand-link {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+}
+
+.cp-sidebar__brand-link:focus-visible {
+  outline: 2px solid var(--cp-accent-hover);
+  outline-offset: 3px;
+}
+
 .cp-sidebar__brand .cp-logo {
   justify-content: center;
   width: 100%;

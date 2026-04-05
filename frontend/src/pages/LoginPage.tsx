@@ -43,7 +43,12 @@ export default function LoginPage() {
           <Logo variant="compact" />
           <span className="cp-login__brand-text">CarePilot</span>
         </Link>
-        <Link to="/" className="cp-login__nav-icon" title="Home" aria-label="Home">
+        <Link
+          to="/"
+          className="cp-login__nav-icon"
+          title="Home"
+          aria-label="Home"
+        >
           <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden>
             <path
               fill="none"
@@ -78,8 +83,9 @@ export default function LoginPage() {
           </div>
 
           <p className="cp-login__lede">
-            Nutrition and habits meet your profile—genes load the map, whole foods fuel the path. Sign in with
-            username and email (demo: no password).
+            Nutrition and habits meet your profile—genes load the map, whole
+            foods fuel the path. Sign in with username and email (demo: no
+            password).
           </p>
 
           <form className="cp-login__form" onSubmit={(e) => void onSubmit(e)}>
@@ -121,12 +127,18 @@ export default function LoginPage() {
               </p>
             ) : null}
 
-            <button type="submit" className="cp-login__submit" disabled={busy || !termsAccepted}>
+            <button
+              type="submit"
+              className="cp-login__submit"
+              disabled={busy || !termsAccepted}
+            >
               {busy ? "Signing in…" : "Sign in"}
             </button>
 
             <div className="cp-login__footer-row">
-              <span className="cp-login__hint">Username + email only—no password in this demo.</span>
+              <span className="cp-login__hint">
+                Username + email only—no password in this demo.
+              </span>
               <span className="cp-login__first-time">
                 New?{" "}
                 <Link to="/quick-check" className="cp-login__inline-link">
@@ -145,9 +157,13 @@ export default function LoginPage() {
               />
               <label htmlFor="login-terms" className="cp-login__terms-label">
                 I understand CarePilot is for{" "}
-                <strong>education and navigation</strong>, not a diagnosis or medical nutrition therapy. I agree to
-                the{" "}
-                <a href="https://www.myplate.gov/" target="_blank" rel="noopener noreferrer">
+                <strong>education and navigation</strong>, not a diagnosis or
+                medical nutrition therapy. I agree to the{" "}
+                <a
+                  href="https://www.myplate.gov/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   trusted public resources
                 </a>{" "}
                 framing used in the app.
@@ -156,7 +172,8 @@ export default function LoginPage() {
           </form>
 
           <p className="cp-login__demo-note">
-            Demo: sessions live in server memory and clear when the API restarts.
+            Demo: sessions live in server memory and clear when the API
+            restarts.
           </p>
         </div>
       </div>

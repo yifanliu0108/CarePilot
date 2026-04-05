@@ -25,7 +25,11 @@ export default function HomePage() {
         </p>
 
         <div className="cp-landing__cta">
-          <Link to="/quick-check" className="cp-btn cp-btn--primary cp-landing__btn">
+          <Link
+            to="/quick-check"
+            state={{ startQuiz: true }}
+            className="cp-btn cp-btn--primary cp-landing__btn"
+          >
             Start 2-min check
           </Link>
         </div>

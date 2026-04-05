@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useSession } from "../context/SessionContext";
 import { Logo } from "./Logo";
 
@@ -23,7 +23,9 @@ export default function AppLayout() {
       {!hideSidebar ? (
       <aside className="cp-sidebar" aria-label="Main navigation">
         <div className="cp-sidebar__brand">
-          <Logo />
+          <Link to="/" className="cp-sidebar__brand-link" title="CarePilot home">
+            <Logo />
+          </Link>
         </div>
         <nav className="cp-nav">
           {tabs.map(({ to, label, end }) => (

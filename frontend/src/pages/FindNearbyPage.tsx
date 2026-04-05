@@ -386,19 +386,19 @@ export default function FindNearbyPage() {
             }
             muted={!locationReady}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid items-stretch gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 disabled={!locationReady}
                 onClick={() => pickCategory("grocery")}
-                className={`rounded-xl border-2 px-4 py-4 text-left transition-shadow ${
+                className={`flex h-full min-h-0 flex-col items-stretch justify-start rounded-xl border-2 px-4 py-4 text-left transition-shadow ${
                   nearbyCategory === "grocery"
                     ? "border-cp-sage-600 bg-cp-sage-50/90 shadow-md ring-1 ring-cp-sage-500/20"
                     : "border-slate-200 bg-white hover:border-cp-sage-300 hover:shadow-sm"
                 } ${!locationReady ? "cursor-not-allowed" : ""}`}
               >
-                <p className="text-sm font-bold text-cp-sage-950">Grocery stores</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                <p className="m-0 text-sm font-bold leading-snug text-cp-sage-950">Grocery stores</p>
+                <p className="mt-1.5 m-0 text-xs leading-relaxed text-slate-600">
                   Supermarkets near you. Names can narrow Browser Use price checks on Chat.
                 </p>
               </button>
@@ -406,14 +406,14 @@ export default function FindNearbyPage() {
                 type="button"
                 disabled={!locationReady}
                 onClick={() => pickCategory("care")}
-                className={`rounded-xl border-2 px-4 py-4 text-left transition-shadow ${
+                className={`flex h-full min-h-0 flex-col items-stretch justify-start rounded-xl border-2 px-4 py-4 text-left transition-shadow ${
                   nearbyCategory === "care"
                     ? "border-cp-sage-600 bg-cp-sage-50/90 shadow-md ring-1 ring-cp-sage-500/20"
                     : "border-slate-200 bg-white hover:border-cp-sage-300 hover:shadow-sm"
                 } ${!locationReady ? "cursor-not-allowed" : ""}`}
               >
-                <p className="text-sm font-bold text-cp-sage-950">Care facilities</p>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600">
+                <p className="m-0 text-sm font-bold leading-snug text-cp-sage-950">Care facilities</p>
+                <p className="mt-1.5 m-0 text-xs leading-relaxed text-slate-600">
                   ER, urgent care, or hospitals. Maps only—not medical advice.
                 </p>
               </button>
