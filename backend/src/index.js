@@ -14,6 +14,7 @@ import {
   createCloudSession,
   getCloudSession,
 } from "./browserUseCloud.js";
+import { buildCarePlacesTask } from "./careCloudTask.js";
 import { buildGroceryPriceTask } from "./groceryCloudTask.js";
 import {
   assistWithGemini,
@@ -150,10 +151,11 @@ app.get("/api/journey/gemini-status", (_req, res) => {
 /**
  * Start a Browser Use Cloud **v2** agent task (POST …/api/v2/tasks). Poll GET …/cloud-task/:id.
  * Body: { task: string, model?: string } — maps to v2 `llm` — or —
- * { grocery: { userMessage?, priceCheckItems?, nutritionSummary? }, model?: string }
+ * { grocery: ... } | { care: { userMessage?, context? } } | { task: string }
  */
 app.post("/api/journey/cloud-task", async (req, res) => {
   const g = req.body?.grocery;
+  const care = req.body?.care;
   let task;
   if (g && typeof g === "object") {
     task = buildGroceryPriceTask({
@@ -164,12 +166,17 @@ app.post("/api/journey/cloud-task", async (req, res) => {
       nutritionSummary:
         typeof g.nutritionSummary === "string" ? g.nutritionSummary : "",
     });
+  } else if (care && typeof care === "object") {
+    task = buildCarePlacesTask({
+      userMessage: typeof care.userMessage === "string" ? care.userMessage : "",
+      context: typeof care.context === "string" ? care.context : "",
+    });
   } else if (typeof req.body?.task === "string" && req.body.task.trim()) {
     task = req.body.task.trim();
   } else {
     res.status(400).json({
       error:
-        "body.task (non-empty string) required, or body.grocery object for Walmart/Vons/Ralphs price check",
+        "body.task (non-empty string) required, or body.grocery (prices), or body.care (hospitals / urgent care)",
     });
     return;
   }

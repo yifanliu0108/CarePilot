@@ -34,9 +34,9 @@ export function RecommendationPanel({
           Recommendation
         </h2>
         <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          Use the checkboxes to choose what you want the browser agent to work on. Only checked
-          items are included when you run a cloud session. Quick links in the chat stay available
-          anytime—this list is for automated browsing.
+          Check the steps you want, then Run selected. Results (prices, Maps links, etc.) are posted
+          in the main chat when the run finishes. Quick links in the chat stay available anytime—
+          this list drives Browser Use only.
         </p>
         <div className="mt-3">
           <SmartButton

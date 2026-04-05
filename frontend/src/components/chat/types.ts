@@ -2,6 +2,35 @@ import type { BrowserSession } from "./journeyTypes";
 
 export type ResourceLink = { label: string; url: string };
 
+export type GroceryPriceRow = {
+  store: string;
+  product: string;
+  price: string;
+  productUrl?: string;
+  /** Direct search-results URL so the user can re-run the search in one tap. */
+  searchUrl?: string;
+};
+
+export type GroceryQueryResult = { query: string; results: GroceryPriceRow[] };
+
+export type CarePlaceRow = {
+  name: string;
+  address?: string;
+  mapsUrl?: string;
+  rating?: string;
+  note?: string;
+};
+
+/** Structured Browser Use follow-up shown in the center chat. */
+export type BrowserRunPayload = {
+  kind: "grocery" | "care" | "generic";
+  title: string;
+  subtitle?: string;
+  grocery?: GroceryQueryResult[];
+  carePlaces?: CarePlaceRow[];
+  rawText?: string;
+};
+
 export type RecommendationAction = {
   id: string;
   label: string;
@@ -17,6 +46,8 @@ export type AssistantChatMessage = {
   foodsToTry: string[];
   /** Curated links from the API (label + url). Section title comes from `titleForResourceLinks`. */
   resourceLinks: ResourceLink[];
+  /** Filled when a Browser Use task completes—rendered with clear sections in the chat card. */
+  browserRun?: BrowserRunPayload;
 };
 
 export type ChatMessage = UserChatMessage | AssistantChatMessage;
@@ -37,6 +68,19 @@ export function assistantMessageFromApi(
     text: assistantText,
     foodsToTry,
     resourceLinks,
+  };
+}
+
+/** Assistant message for a completed Browser Use task (center chat). */
+export function assistantMessageFromBrowserRun(id: string, run: BrowserRunPayload): AssistantChatMessage {
+  const text = run.subtitle ? `${run.title}\n\n${run.subtitle}` : run.title;
+  return {
+    id,
+    role: "assistant",
+    text,
+    foodsToTry: [],
+    resourceLinks: [],
+    browserRun: run,
   };
 }
 

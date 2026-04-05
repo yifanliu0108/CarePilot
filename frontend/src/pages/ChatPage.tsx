@@ -7,8 +7,9 @@ import type { BrowserSession, CloudSessionView } from "../components/chat/journe
 import { buildRecommendationActions } from "../components/chat/recommendationActions";
 import { titleForResourceLinks } from "../components/chat/resourceLinks";
 import { RecommendationPanel } from "../components/chat/RecommendationPanel";
+import { browserRunPayloadFromOutput } from "../components/chat/cloudTaskFormat";
 import type { ChatMessage, RecommendationAction } from "../components/chat/types";
-import { assistantMessageFromApi } from "../components/chat/types";
+import { assistantMessageFromApi, assistantMessageFromBrowserRun } from "../components/chat/types";
 
 function isCloudRunning(view: CloudSessionView): boolean {
   if (typeof view.stillRunning === "boolean") return view.stillRunning;
@@ -63,6 +64,12 @@ function buildCloudRequestBody(
 
   const selectedCombined = [...selectedDescriptions, ...selectedOrphanLabels];
 
+  const careKeywords =
+    /hospital|emergency|\ber\b|urgent care|nearest (emergency|hospital|er)|closest (hospital|er)/i;
+  const careHint =
+    selectedCombined.length > 0 &&
+    careKeywords.test(`${selectedCombined.join(" ")} ${lastUserMessage}`);
+
   if (!wantGrocery && selectedCombined.length === 0) return null;
 
   if (wantGrocery && items.length > 0) {
@@ -79,6 +86,15 @@ function buildCloudRequestBody(
         userMessage: lastUserMessage,
         priceCheckItems: items,
         nutritionSummary,
+      },
+    });
+  }
+
+  if (careHint) {
+    return JSON.stringify({
+      care: {
+        userMessage: lastUserMessage,
+        context: [selectedCombined.join(" | "), live.task].filter(Boolean).join("\n"),
       },
     });
   }
@@ -104,7 +120,7 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. When you get a plan, use the sidebar checkboxes to choose what the browser agent should do, then tap Run selected. Grocery price checks appear only when your plan includes shopping items; with BROWSER_USE_API_KEY on the server, those runs use Walmart, Vons, and Ralphs (sites may block automation).";
+  "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. When you get a plan, check the steps you want in the sidebar and tap Run selected—a formatted summary of the browser run will appear in this chat. Grocery runs (when your plan lists shopping items) search Walmart, Vons, and Ralphs; steps about ER, hospitals, or urgent care can run a Maps-style search. Add BROWSER_USE_API_KEY on the server; sites may block automation.";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -129,6 +145,15 @@ export default function ChatPage() {
   messagesRef.current = messages;
   const lastPatientMessageRef = useRef("");
   const cloudPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const appendedCloudTaskIdsRef = useRef(new Set<string>());
+
+  function appendCloudResultToChat(session: CloudSessionView) {
+    if (!session.id || appendedCloudTaskIdsRef.current.has(session.id)) return;
+    const payload = browserRunPayloadFromOutput(session.output, session.status);
+    if (!payload) return;
+    appendedCloudTaskIdsRef.current.add(session.id);
+    setMessages((m) => [...m, assistantMessageFromBrowserRun(makeId(), payload)]);
+  }
 
   useEffect(() => {
     const last = [...messagesRef.current].reverse().find((m) => m.role === "assistant");
@@ -202,6 +227,7 @@ export default function ChatPage() {
         throw new Error("Cloud did not return a session id");
       }
       if (!isCloudRunning(current)) {
+        appendCloudResultToChat(current);
         setCloudActive(false);
         return;
       }
@@ -219,6 +245,7 @@ export default function ChatPage() {
         current = parseCloudSession(d);
         setCloudSession({ ...current });
         if (!isCloudRunning(current)) {
+          appendCloudResultToChat(current);
           stopCloudPoll();
           setCloudActive(false);
         }
@@ -425,6 +452,11 @@ export default function ChatPage() {
                   sandbox="allow-scripts allow-same-origin allow-popups"
                 />
               </>
+            ) : null}
+            {!isCloudRunning(cloudSession) ? (
+              <p className="mt-2 text-[11px] text-slate-500">
+                A formatted copy is also in the chat thread above.
+              </p>
             ) : null}
             <CloudTaskOutput output={cloudSession.output} status={cloudSession.status} />
           </div>
