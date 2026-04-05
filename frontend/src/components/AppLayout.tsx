@@ -7,7 +7,7 @@ type Tab = { to: string; label: string; end?: boolean };
 const tabs: Tab[] = [
   { to: "/", label: "Home", end: true },
   { to: "/input", label: "Health input" },
-  { to: "/chat", label: "Chat" },
+  { to: "/chat", label: "Coach" },
   { to: "/plan", label: "Meal plan" },
 ];
 

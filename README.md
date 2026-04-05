@@ -1,5 +1,7 @@
 # CarePilot
 
+**Why “CarePilot”?** Most healthcare apps stop at **recommendations**. CarePilot is for people who **aren’t sick yet**—they need **guidance to stay on track** with everyday wellness and subhealth. We don’t only say what might help; when you choose to run **Live actions**, we **take the next step in the browser for you** (via [Browser Use Cloud](https://cloud.browser-use.com/)—optional API key), so it’s **agentic**: plan → **action**, not plan → wall of text. Not for emergencies or diagnosing disease.
+
 Monorepo layout so the team can branch around **frontend** and **backend** separately:
 
 | Folder       | Role                                                         |

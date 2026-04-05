@@ -82,7 +82,7 @@ function parseGroceryCloudOutput(output: unknown): { items: GroceryPriceItem[] }
 function taskFromLivePlan(live: BrowserSession, lastUserMessage: string) {
   const stepLine = live.steps.map((s) => s.description).join(" ");
   return [
-    "You are helping someone explore nutrition and trusted public health resources on the web only.",
+    "You help a generally well person with subhealth / wellness nutrition—trusted public sites only; not medical diagnosis or emergencies.",
     `User said: "${lastUserMessage.slice(0, 500)}".`,
     `Goal: ${live.task}`,
     `Suggested steps: ${stepLine}`,
@@ -148,7 +148,7 @@ export default function ChatPage() {
       id: "welcome",
       role: "assistant",
       text:
-        "Hi—I am your CarePilot nutrition assistant. Ask about foods for sleep, focus, digestion, muscles and joints, or immune support. Mention your concern or use the wording from your profile. With BROWSER_USE_API_KEY on the server, use “Check grocery prices” to run Browser Use Cloud on Walmart, Vons, and Ralphs—results may be incomplete if sites block automation.",
+        "Hi—I’m your CarePilot coach. We go past tips: use Live actions to run real browser steps you approve (e.g. research or grocery checks with Browser Use Cloud + API key). You’re not sick yet—we help you stay on track with food and habits: sleep, focus, digestion, and more. Not for emergencies. Ask anything or use your profile.",
     },
   ]);
   const [draft, setDraft] = useState("");
@@ -315,11 +315,15 @@ export default function ChatPage() {
 
   return (
     <div className="cp-journey">
-      <section className="cp-chat" aria-label="Nutrition chat">
+      <section className="cp-chat" aria-label="Subhealth chat">
         <header className="cp-chat__head">
-          <h1 className="cp-chat__title">Food &amp; subhealth chat</h1>
+          <h1 className="cp-chat__title">CarePilot coach</h1>
           <p className="cp-chat__sub">
-            Nutrition plan + optional grocery price check on Browser Use Cloud
+            Recommendations are table stakes—we pair them with <strong>actions</strong> you trigger in
+            Live actions (Browser Use Cloud when configured). Not emergency care.{" "}
+            {geminiConfigured
+              ? "AI: Gemini on the server."
+              : "Add GEMINI_API_KEY in backend/.env for Gemini; otherwise a simple planner."}
           </p>
         </header>
         <div className="cp-chat__messages" ref={listRef} role="log" aria-live="polite">
@@ -342,7 +346,7 @@ export default function ChatPage() {
             id="cp-chat-input"
             className="cp-chat__input"
             rows={2}
-            placeholder="e.g. Foods that might help with sleep and recovery…"
+            placeholder="e.g. Light meal ideas when I feel low energy after work…"
             value={draft}
             disabled={liveLoading}
             onChange={(e) => setDraft(e.target.value)}
@@ -446,8 +450,9 @@ export default function ChatPage() {
                 Idle
               </div>
               <p className="cp-live__hint">
-                Send a message to generate next steps. A real Browser Use agent would run these in
-                Playwright and stream progress here after you approve each session.
+                Chat first—we turn advice into a plan here. Then you run Live actions so CarePilot can
+                take browser steps on your behalf (Browser Use Cloud when configured), not just list
+                what you should do.
               </p>
             </>
           )}

@@ -33,7 +33,10 @@ export default function LoginPage() {
     <div className="cp-auth">
       <div className="cp-auth__card">
         <h1 className="cp-auth__title">CarePilot</h1>
-        <p className="cp-auth__lede">Sign in with your username and email to continue.</p>
+        <p className="cp-auth__lede">
+          Stay on track before you’re sick: guidance plus optional <strong>agentic</strong> steps in
+          the browser—not only recommendations. Sign in to save your profile. Not for emergencies.
+        </p>
         <form className="cp-form" onSubmit={(e) => void onSubmit(e)}>
           <label className="cp-form__label">
             Username

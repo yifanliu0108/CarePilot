@@ -17,12 +17,14 @@ export default function HomePage() {
   return (
     <div className="cp-cover">
       <div className="cp-cover__panel">
-        <h1 className="cp-home__hero">Nutrition guidance for subhealth</h1>
+        <h1 className="cp-home__hero">Beyond recommendations—we take action</h1>
         <p className="cp-cover__lede">
-          CarePilot helps you organize how you eat when you are not quite feeling your best—sleep,
-          focus, digestion, muscles and joints, and immune resilience. Chat blends structured food
-          ideas with optional Browser Use Cloud so you can open trusted sites in a live browser
-          session.
+          Most apps stop at advice. <strong>CarePilot</strong> is named because you’re{" "}
+          <strong>not sick yet</strong>—you need guidance to <strong>stay on track</strong> with
+          subhealth: sleep, focus, digestion, movement, resilience. Chat turns into{" "}
+          <strong>Live actions</strong>: optional browser automation opens trusted sites and runs
+          steps you approve—we don’t just tell you what to do, we help{" "}
+          <strong>do it with you</strong>. Not diagnosis or emergency care.
         </p>
         {!done ? (
           <p className="cp-cover__meta cp-cover__meta--warn">
