@@ -45,9 +45,6 @@ export function ChatWindow({
         <h1 className="m-0">
           <Logo variant="compact" />
         </h1>
-        <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-          Structured guidance · Run Browser Use only when you tap an action
-        </p>
       </header>
 
       <div
