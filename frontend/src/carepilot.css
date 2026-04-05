@@ -52,7 +52,7 @@
   }
 }
 
-/* ChatWindow compact logo — PNG max height (square carepilot-logo.png) */
+/* ChatWindow compact logo — max height (square carepilot-logo.svg) */
 :root {
   --cp-chat-compact-logo-height: 56px;
 }
@@ -100,16 +100,7 @@
   margin-inline: auto;
 }
 
-/* Opaque white in the PNG reads as a “tile” on off-white sidebar — multiply blends it into --cp-surface */
-.cp-sidebar .cp-logo__img {
-  mix-blend-mode: multiply;
-}
-
-.cp-auth .cp-logo__img {
-  mix-blend-mode: multiply;
-}
-
-/* Square PNG (icon + wordmark) — one dimension + object-fit keeps aspect ratio */
+/* Square logo (icon + wordmark) — one dimension + object-fit keeps aspect ratio */
 .cp-logo {
   display: flex;
   flex-direction: column;
@@ -119,6 +110,11 @@
   flex-shrink: 0;
   align-self: center;
   line-height: 0;
+}
+
+/* Avoid flex/min-w-0 collapsing the compact mark in the chat header */
+.cp-logo--compact {
+  min-width: var(--cp-chat-compact-logo-height);
 }
 
 .cp-logo__img {
@@ -135,6 +131,7 @@
 
 /* Chat: small square tile */
 .cp-logo--compact .cp-logo__img {
+  flex-shrink: 0;
   max-width: 56px;
   max-height: 56px;
 }

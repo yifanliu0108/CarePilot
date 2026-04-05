@@ -1,6 +1,6 @@
-export type LogoVariant = "default" | "compact" | "hero";
+import logoSrc from "../assets/carepilot-logo.svg";
 
-const LOGO_SRC = "/carepilot-logo.png";
+export type LogoVariant = "default" | "compact" | "hero";
 
 type LogoProps = {
   variant?: LogoVariant;
@@ -8,7 +8,7 @@ type LogoProps = {
 };
 
 /**
- * Full CarePilot mark from raster (square PNG — icon + wordmark). Scales with object-fit: contain only.
+ * CarePilot mark (square SVG — icon + wordmark). Scales with object-fit: contain only.
  */
 export function Logo({ variant = "default", className = "" }: LogoProps) {
   const variantClass =
@@ -16,7 +16,7 @@ export function Logo({ variant = "default", className = "" }: LogoProps) {
   return (
     <div className={`cp-logo ${variantClass} ${className}`.trim()}>
       <img
-        src={LOGO_SRC}
+        src={logoSrc}
         alt="CarePilot"
         className="cp-logo__img"
         width={1024}
