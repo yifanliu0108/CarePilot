@@ -5,7 +5,6 @@ import { Logo } from "./Logo";
 type Tab = { to: string; label: string; end?: boolean };
 
 const tabs: Tab[] = [
-  { to: "/", label: "Home", end: true },
   { to: "/quick-check", label: "Quick check" },
   { to: "/input", label: "Health input" },
   { to: "/chat", label: "Chat" },
@@ -15,7 +14,8 @@ const tabs: Tab[] = [
 export default function AppLayout() {
   const { logout, me, sessionId } = useSession();
   const { pathname } = useLocation();
-  const hideSidebar = pathname === "/" || pathname === "/quick-check";
+  /** Full-width home & guest quick check; signed-in users get sidebar (Quick check, Health input, …). */
+  const hideSidebar = pathname === "/" || (pathname === "/quick-check" && !sessionId);
 
   return (
     <div className={"cp-shell" + (hideSidebar ? " cp-shell--full" : "")}>

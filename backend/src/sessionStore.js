@@ -29,6 +29,7 @@ function emptyProfile() {
     immuneRating: null,
     completedOnboarding: false,
     symptomTagIds: [],
+    chatMealPlanContext: null,
   };
 }
 

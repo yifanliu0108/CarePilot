@@ -1,4 +1,12 @@
 /**
+ * @typedef {Object} ChatMealPlanContext
+ * @property {string} updatedAt — ISO timestamp
+ * @property {string[]} symptomsMentioned
+ * @property {string[]} categoryBoosts — mealPlan category ids (e.g. digestive)
+ * @property {Array<{ day: string, breakfast: string, lunch: string, dinner: string, snacks: string[] }> | null} [weeklyDayMeals] — full week from chat/Gemini
+ */
+
+/**
  * @typedef {Object} HealthProfile
  * @property {number | null} age
  * @property {number | null} heightCm
@@ -11,6 +19,7 @@
  * @property {number | null} immuneRating
  * @property {boolean} completedOnboarding
  * @property {string[]} [symptomTagIds] — optional quick-check symptom chip ids
+ * @property {ChatMealPlanContext | null} [chatMealPlanContext] — last nutrition-chat meal struct (merged into meal plan API)
  */
 
 /** @param {number | null} heightCm @param {number | null} weightKg */

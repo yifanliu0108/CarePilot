@@ -7,6 +7,7 @@
  */
 
 import { GoogleGenAI, Type } from "@google/genai";
+import { coerceMealPlanUpdate } from "./mealPlanFromChat.js";
 
 const SYSTEM_INSTRUCTION = `You are CarePilot, a healthcare navigation assistant for the public web.
 
@@ -111,6 +112,45 @@ const assistResponseSchema = {
   required: ["intent", "assistantText", "browserSession"],
 };
 
+const mealPlanDaySchema = {
+  type: Type.OBJECT,
+  properties: {
+    day: { type: Type.STRING, description: "Mon, Tue, …" },
+    breakfast: { type: Type.STRING },
+    lunch: { type: Type.STRING },
+    dinner: { type: Type.STRING },
+    snacks: { type: Type.ARRAY, items: { type: Type.STRING } },
+  },
+  required: ["day", "breakfast", "lunch", "dinner", "snacks"],
+};
+
+const mealPlanUpdateSchema = {
+  type: Type.OBJECT,
+  properties: {
+    apply: {
+      type: Type.BOOLEAN,
+      description:
+        "True when user mentioned symptoms/feelings or asked for symptom-aware meals; then populate boosts and/or weekly rows.",
+    },
+    symptomsMentioned: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description: "Short phrases, max 8",
+    },
+    categoryBoosts: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING },
+      description:
+        "From: sleep_recovery, cognitive_focus, digestive, musculoskeletal, immune",
+    },
+    weeklyDayMeals: {
+      type: Type.ARRAY,
+      items: mealPlanDaySchema,
+      description: "Prefer exactly 7 days Mon–Sun when apply is true.",
+    },
+  },
+};
+
 /** Same JSON shape; intent labels are nutrition/subhealth topics. */
 const nutritionAssistResponseSchema = {
   ...assistResponseSchema,
@@ -121,6 +161,7 @@ const nutritionAssistResponseSchema = {
       description:
         "Topic label: sleep, cognitive, digestive, musculoskeletal, immune, general, or meta — best match for the user message AND conversation thread.",
     },
+    mealPlanUpdate: mealPlanUpdateSchema,
   },
 };
 
@@ -138,6 +179,8 @@ Report style (assistantText):
 browserSession coherence: task, every steps[].description, and actions must match the user's concern. Symptom + food context (e.g. neck pain: ergonomics, anti-inflammatory patterns, red flags) stays on-topic. Do not push shopping or price workflows unless they asked.
 
 priceCheckItems: non-empty ONLY when the user clearly wants shopping, prices, groceries, stores, or food budget help. Otherwise return priceCheckItems: [].
+
+mealPlanUpdate: When the user mentions how they feel, symptoms, or asks for meals tailored to a concern, set apply: true. Fill symptomsMentioned (short phrases from their words). Set categoryBoosts to 1–3 values from: sleep_recovery, cognitive_focus, digestive, musculoskeletal, immune. When you can, also fill weeklyDayMeals with exactly 7 rows (Mon through Sun): each row has day, breakfast, lunch, dinner (one practical sentence each), and snacks (1–3 short strings). Those rows sync to their in-app weekly meal planner (educational ideas only). If a full week is not appropriate, still set apply true with symptoms and categoryBoosts and use an empty weeklyDayMeals array.
 
 If asked which AI model you are, say honestly: CarePilot using Google Gemini via the app backend; the configured model id appears below. Output must follow the JSON schema; browserSession is suggested steps and https links only (no logins).`;
 
@@ -264,7 +307,7 @@ export function normalizeAssistPayload(parsed) {
         .slice(0, 8)
     : [];
 
-  return {
+  const base = {
     intent,
     assistantText,
     browserSession: {
@@ -284,6 +327,16 @@ export function normalizeAssistPayload(parsed) {
       ...(priceCheckItems.length ? { priceCheckItems } : {}),
     },
   };
+
+  const mpu = parsed.mealPlanUpdate;
+  if (mpu && typeof mpu === "object") {
+    const coerced = coerceMealPlanUpdate(mpu);
+    if (coerced) {
+      base.mealPlanUpdate = { apply: true, ...coerced };
+    }
+  }
+
+  return base;
 }
 
 /**

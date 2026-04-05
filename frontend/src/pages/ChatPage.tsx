@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "../api/session";
+import { useSession } from "../context/SessionContext";
 import { ChatWindow } from "../components/chat/ChatWindow";
 import { CloudTaskOutput } from "../components/chat/CloudTaskOutput";
 import { cloudStatusStillRunning } from "../components/chat/cloudStatus";
@@ -145,9 +146,10 @@ function makeId() {
 }
 
 const WELCOME_TEXT =
-  "Hi—I'm your CarePilot nutrition assistant. Ask about food for sleep, focus, digestion, muscles/joints, or immune support. Describe your symptoms or use your profile. When you get a plan, select actions in the sidebar and tap Run selected—a formatted browser summary appears in this chat. With GOOGLE_MAPS_API_KEY on the server, you can find nearby grocery stores and care facilities directly (sidebar). Grocery price checks still use Browser Use on retailer sites; we pass nearby store names from Maps to focus those runs. Add BROWSER_USE_API_KEY for cloud browser tasks.";
+  "Hi! I'm your CarePilot nutrition assistant\n\nAsk about food for sleep, focus, digestion, muscles/joints, or immunity. Share your symptoms or use your profile to get a meal plan (it syncs to your weekly view when signed in).";
 
 export default function ChatPage() {
+  const { refreshMe, sessionId } = useSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -555,7 +557,17 @@ export default function ChatPage() {
       const assistantText = (data as { assistantText?: string }).assistantText;
       const browserSession = (data as { browserSession?: BrowserSession })
         .browserSession;
-      const reply = assistantText ?? "No reply from planner.";
+      const mealPlanUpdate = (
+        data as { mealPlanUpdate?: { apply?: boolean } }
+      ).mealPlanUpdate;
+      if (mealPlanUpdate?.apply && sessionId) {
+        void refreshMe();
+      }
+      let reply = assistantText ?? "No reply from planner.";
+      if (mealPlanUpdate?.apply) {
+        reply +=
+          "\n\n— Your meal plan was updated from this chat. Open Meal plan in the sidebar to review the week.";
+      }
       const asst = assistantMessageFromApi(makeId(), reply, browserSession);
       setMessages((m) => [...m, asst]);
       if (browserSession) setLive(browserSession);

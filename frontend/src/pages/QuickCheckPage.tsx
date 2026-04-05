@@ -1,32 +1,105 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { HeroBackdrop } from "../components/HeroBackdrop";
 import { apiFetch } from "../api/session";
 import { useSession, type HealthProfile } from "../context/SessionContext";
 import {
-  buildPatternResult,
-  detectPattern,
-  LIKERT_OPTIONS,
+  domainBreakdown,
+  illnessLikelihoodIndexPercent,
+  LIKERT_OPTIONS_VISUAL,
   overallRisk,
   QUICK_QUESTIONS,
   risksFromAnswers,
-  type PatternResult,
+  signalStrengthPercent,
+  symptomsOnlyLikelihoodPercent,
   type RiskRow,
 } from "../lib/quickCheck";
-import { formatSymptomSummary, SYMPTOM_WIZARD_PAGES } from "../lib/symptomTags";
+import { SYMPTOM_WIZARD_PAGES } from "../lib/symptomTags";
 
-function QuickCheckShell({ children, scroll }: { children: ReactNode; scroll?: boolean }) {
+const SIGNAL_RING_R = 54;
+const SIGNAL_RING_C = 2 * Math.PI * SIGNAL_RING_R;
+
+function SubhealthScoreRing({
+  percent,
+  answerPercent,
+  earlySignalBump,
+  earlySignalCount,
+}: {
+  percent: number;
+  answerPercent: number;
+  earlySignalBump: number;
+  earlySignalCount: number;
+}) {
+  const p = Math.min(100, Math.max(0, Math.round(percent)));
+  const offset = SIGNAL_RING_C * (1 - p / 100);
+  const tier = p < 34 ? "low" : p < 67 ? "mid" : "high";
+  return (
+    <div
+      className="cp-quick__signal-hero"
+      role="group"
+      aria-label={`Subhealth score ${p} percent. Weighted answers contribute ${answerPercent} percent; ${earlySignalCount} early signal tags add ${earlySignalBump} percent. Educational index, not medical advice.`}
+    >
+      <div className="cp-quick__signal-ring-wrap">
+        <svg className="cp-quick__signal-ring" viewBox="0 0 128 128" aria-hidden>
+          <circle className="cp-quick__signal-ring-track" cx={64} cy={64} r={SIGNAL_RING_R} fill="none" />
+          <circle
+            className={`cp-quick__signal-ring-fill cp-quick__signal-ring-fill--${tier}`}
+            cx={64}
+            cy={64}
+            r={SIGNAL_RING_R}
+            fill="none"
+            strokeDasharray={SIGNAL_RING_C}
+            strokeDashoffset={offset}
+            transform="rotate(-90 64 64)"
+          />
+        </svg>
+        <div className="cp-quick__signal-ring-center">
+          <span className="cp-quick__signal-pct">{p}</span>
+          <span className="cp-quick__signal-pct-unit" aria-hidden>
+            %
+          </span>
+        </div>
+      </div>
+      <p className="cp-quick__signal-title">Subhealth score</p>
+      {earlySignalCount > 0 ? (
+        <p className="cp-quick__likelihood-split">
+          Answers <strong>{answerPercent}%</strong> · Early signals <strong>+{earlySignalBump}%</strong> (
+          {earlySignalCount} selected)
+        </p>
+      ) : (
+        <p className="cp-quick__likelihood-split">Based on Likert answers only — you didn&apos;t add early signals.</p>
+      )}
+    </div>
+  );
+}
+
+function QuickCheckShell({
+  children,
+  scroll,
+  showBrandNav = true,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  /** When false, top “CarePilot” link is hidden (signed-in users use sidebar + logo). */
+  showBrandNav?: boolean;
+}) {
   return (
     <div
       id="cp-quick-check-page"
-      className={"cp-page cp-page--quick" + (scroll ? " cp-page--quick--scroll" : "")}
+      className={
+        "cp-page cp-page--quick" +
+        (scroll ? " cp-page--quick--scroll" : "") +
+        (!showBrandNav ? " cp-page--quick--no-topnav" : "")
+      }
     >
       <HeroBackdrop />
-      <header className="cp-quick__nav" aria-label="Site">
-        <Link to="/" className="cp-quick__nav-brand">
-          CarePilot
-        </Link>
-      </header>
+      {showBrandNav ? (
+        <header className="cp-quick__nav" aria-label="Site">
+          <Link to="/" className="cp-quick__nav-brand">
+            CarePilot
+          </Link>
+        </header>
+      ) : null}
       {children}
     </div>
   );
@@ -61,7 +134,7 @@ export default function QuickCheckPage() {
   const [symptomStep, setSymptomStep] = useState(0);
   const [selectedSymptomIds, setSelectedSymptomIds] = useState<string[]>([]);
   const [savedSymptomIds, setSavedSymptomIds] = useState<string[]>([]);
-  const [result, setResult] = useState<PatternResult | null>(null);
+  const [riskRow, setRiskRow] = useState<RiskRow | null>(null);
   const [score, setScore] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,10 +162,8 @@ export default function QuickCheckPage() {
   const finish = useCallback(
     async (finalAnswers: number[], symptomTagIds: string[]) => {
       const risks = risksFromAnswers(finalAnswers);
-      const id = detectPattern(risks);
-      const pr = buildPatternResult(id);
       const ov = overallRisk(risks);
-      setResult(pr);
+      setRiskRow(risks);
       setScore(Math.round(ov * 10) / 10);
       setSavedSymptomIds(symptomTagIds);
       setPhase("result");
@@ -174,96 +245,98 @@ export default function QuickCheckPage() {
     setStep(step - 1);
   }
 
-  function restart() {
-    setStep(0);
-    setAnswers([]);
-    setPhase("likert");
-    setSymptomStep(0);
-    setSelectedSymptomIds([]);
-    setSavedSymptomIds([]);
-    setResult(null);
-    setScore(null);
-    setSaveError(null);
-    setSelectedRisk(null);
-  }
+  if (phase === "result") {
+    const row = riskRow ?? risksFromAnswers(answers);
+    const answerPct = score != null ? signalStrengthPercent(score) : 0;
+    const likelihoodPct =
+      score != null
+        ? illnessLikelihoodIndexPercent(score, savedSymptomIds.length)
+        : symptomsOnlyLikelihoodPercent(savedSymptomIds.length);
+    const bumpApplied = Math.max(0, likelihoodPct - answerPct);
+    const breakdown = domainBreakdown(row);
 
-  if (phase === "result" && result) {
     return (
-      <QuickCheckShell scroll>
+      <QuickCheckShell scroll showBrandNav={!sessionId}>
         <div className="cp-page__inner cp-quick cp-quick--result">
-          <header className="cp-quick__result-head">
-            <p className="cp-quick__eyebrow">Your pattern</p>
-            <h1 className="cp-quick__state">{result.title}</h1>
-            <p className="cp-quick__why">
-              <span className="cp-quick__why-label">Why</span> {result.why}
-            </p>
-            <div className="cp-quick__action-card">
-              <p className="cp-quick__action-label">Your next step</p>
-              <p className="cp-quick__action">{result.action}</p>
-            </div>
-            {score != null ? (
-              <p className="cp-quick__meta">
-                Signal strength: <strong>{score}</strong> / 5 · Not a diagnosis — a snapshot for your habits.
+          <header className="cp-quick__result-top">
+            <SubhealthScoreRing
+              percent={likelihoodPct}
+              answerPercent={answerPct}
+              earlySignalBump={bumpApplied}
+              earlySignalCount={savedSymptomIds.length}
+            />
+
+            <section className="cp-quick__weights" aria-labelledby="quick-weights-h">
+              <h2 id="quick-weights-h" className="cp-quick__weights-title">
+                Weighted inputs
+              </h2>
+              <p className="cp-quick__weights-lede">
+                Each row is one question&apos;s option (1–5). Weights match the blended score and the answer portion of
+                your subhealth score; tags from Early signals add extra percentage on top (see above).
               </p>
-            ) : null}
-            {savedSymptomIds.length > 0 ? (
-              <p className="cp-quick__symptom-recap" role="status">
-                Early signals you flagged: {formatSymptomSummary(savedSymptomIds)}. Mention persistent ones to a clinician.
-              </p>
-            ) : (
-              <p className="cp-quick__symptom-recap cp-quick__symptom-recap--none" role="status">
-                No extra symptom tags selected — you can always add details in chat or your full snapshot.
-              </p>
-            )}
-            {saving ? <p className="cp-quick__saving">Saving your snapshot…</p> : null}
-            {saveError ? (
-              <p className="cp-form__error" role="alert">
-                {saveError}
-              </p>
-            ) : null}
-            {!sessionId ? (
-              <p className="cp-quick__meta">
-                You&apos;re not signed in — this snapshot isn&apos;t saved.{" "}
-                <Link to="/login" state={{ from: "/quick-check" }} className="cp-quick__link-secondary">
-                  Sign in
-                </Link>{" "}
-                to keep it on your profile.
-              </p>
-            ) : null}
+              <ul className="cp-quick__weights-list">
+                {breakdown.map((d) => {
+                  const frac = Math.min(1, Math.max(0, (d.risk - 1) / 4));
+                  return (
+                    <li key={d.key} className="cp-quick__weight-item">
+                      <div className="cp-quick__weight-item-head">
+                        <span className="cp-quick__weight-label">{d.label}</span>
+                        <span className="cp-quick__weight-meta">
+                          <span className="cp-quick__weight-pct">{d.weightPct}%</span>
+                          <span className="cp-quick__weight-risk" aria-label={`Risk level ${d.risk} out of 5`}>
+                            {d.risk}/5
+                          </span>
+                        </span>
+                      </div>
+                      <div
+                        className="cp-quick__weight-bar"
+                        role="presentation"
+                        style={{ "--cp-weight-fill": String(frac) } as CSSProperties}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            <section className="cp-quick__result-cta" aria-labelledby="quick-result-cta-h">
+              <h2 id="quick-result-cta-h" className="cp-visually-hidden">
+                Save check-in and next steps
+              </h2>
+              {!sessionId ? (
+                <>
+                  <p className="cp-quick__result-cta-lede">
+                    Sign in to save this check-in to your profile. You&apos;ll get the sidebar:{" "}
+                    <strong>Quick check</strong>, <strong>Health input</strong>, <strong>Chat</strong>, and{" "}
+                    <strong>Meal plan</strong>. Re-run quick check anytime from the nav or from <strong>Profile</strong>.
+                  </p>
+                  <Link
+                    to="/login"
+                    state={{ from: "/quick-check" }}
+                    className="cp-btn cp-btn--primary cp-quick__result-cta-primary"
+                  >
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {saving ? <p className="cp-quick__saving">Saving your snapshot…</p> : null}
+                  {!saving ? (
+                    <p className="cp-quick__result-cta-lede cp-quick__result-cta-lede--signed">
+                      This check-in is saved to your profile. Use the sidebar for <strong>Quick check</strong>,{" "}
+                      <strong>Health input</strong>, <strong>Chat</strong>, and <strong>Meal plan</strong>, or open{" "}
+                      <strong>Profile</strong> to run quick check again.
+                    </p>
+                  ) : null}
+                </>
+              )}
+              {saveError ? (
+                <p className="cp-form__error cp-quick__result-cta-error" role="alert">
+                  {saveError}
+                </p>
+              ) : null}
+            </section>
           </header>
-
-          <section className="cp-quick__detail" aria-labelledby="quick-detail-h">
-            <h2 id="quick-detail-h" className="cp-quick__detail-title">
-              What this means
-            </h2>
-            <p className="cp-quick__summary">{result.summary}</p>
-            <ul className="cp-quick__bullets">
-              {result.whatThisMeans.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-            <h3 className="cp-quick__subhead">Suggestions</h3>
-            <ul className="cp-quick__bullets">
-              {result.suggestions.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          </section>
-
-          <nav className="cp-quick__support" aria-label="Next steps">
-            <Link to="/plan" className="cp-btn cp-btn--primary">
-              Weekly meal plan
-            </Link>
-            <Link to="/chat" className="cp-btn cp-btn--secondary">
-              Ask in chat
-            </Link>
-            <Link to="/input" className="cp-quick__link-secondary">
-              Full health snapshot (body metrics)
-            </Link>
-            <button type="button" className="cp-quick__link-btn" onClick={restart}>
-              Retake quick check
-            </button>
-          </nav>
         </div>
       </QuickCheckShell>
     );
@@ -272,7 +345,7 @@ export default function QuickCheckPage() {
   if (phase === "symptoms") {
     const page = SYMPTOM_WIZARD_PAGES[symptomStep];
     return (
-      <QuickCheckShell scroll>
+      <QuickCheckShell scroll showBrandNav={!sessionId}>
         <div className="cp-page__inner cp-quick cp-quick--symptoms">
           <header className="cp-quick__symptom-top">
             <div className="cp-quick__symptom-kicker">
@@ -367,7 +440,7 @@ export default function QuickCheckPage() {
   }
 
   return (
-    <QuickCheckShell>
+    <QuickCheckShell showBrandNav={!sessionId}>
       <div className="cp-page__inner cp-quick cp-quick--likert">
         <header className="cp-quick__head">
           <p className="cp-quick__eyebrow">Quick check</p>
@@ -400,15 +473,15 @@ export default function QuickCheckPage() {
             {q.prompt}
           </h1>
           <div className="cp-quick__likert" role="radiogroup" aria-labelledby={`quick-q-${q.id}`}>
-            <span className="cp-quick__pole cp-quick__pole--agree">Agree</span>
+            <span className="cp-quick__pole cp-quick__pole--disagree">Disagree</span>
             <div className="cp-quick__scale">
-              {LIKERT_OPTIONS.map((opt, i) => (
+              {LIKERT_OPTIONS_VISUAL.map((opt, i) => (
                 <button
                   key={opt.risk}
                   type="button"
                   className={
                     "cp-quick__likert-btn cp-quick__likert-btn--s" +
-                    i +
+                    (LIKERT_OPTIONS_VISUAL.length - 1 - i) +
                     (selectedRisk === opt.risk ? " cp-quick__likert-btn--selected" : "")
                   }
                   aria-label={`${opt.label}. ${q.prompt}`}
@@ -430,7 +503,7 @@ export default function QuickCheckPage() {
                 </button>
               ))}
             </div>
-            <span className="cp-quick__pole cp-quick__pole--disagree">Disagree</span>
+            <span className="cp-quick__pole cp-quick__pole--agree">Agree</span>
           </div>
         </section>
 

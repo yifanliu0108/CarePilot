@@ -1,3 +1,5 @@
+import { mergeWeeklyPlansWithChat } from "./mealPlanFromChat.js";
+
 /**
  * Daily meal plan from full health snapshot:
  * - Subhealth 1–5: every saved rating contributes weight (r−1)/2; 1 = no pull, 5 = strongest.
@@ -119,6 +121,15 @@ function categoryWeightsFromProfile(profile) {
     const w = subhealthCategoryWeight(profile[field]);
     if (w == null || w <= 0) continue;
     raw[cat] = w;
+  }
+
+  const chatBoosts = profile?.chatMealPlanContext?.categoryBoosts;
+  if (Array.isArray(chatBoosts)) {
+    for (const cat of chatBoosts) {
+      if (cat && CATEGORY_RULES[cat]) {
+        raw[cat] = (raw[cat] ?? 0) + 0.85;
+      }
+    }
   }
 
   const rated = PROFILE_KEYS.map(([field, cat]) => [cat, clampRating(profile[field])])
@@ -332,13 +343,22 @@ function mealSlot(template, fallbackText) {
   };
 }
 
-function pickBestTemplate(templates, getIngredients, foodScores, usage, maxPerIng = 2) {
+function pickBestTemplate(
+  templates,
+  getIngredients,
+  foodScores,
+  usage,
+  maxPerIng = 2,
+  rotation = 0,
+) {
   if (!templates.length) return null;
-  const scored = templates.map((t) => {
+  const rot = Number(rotation) || 0;
+  const scored = templates.map((t, idx) => {
     const ing = getIngredients(t);
     const base = templateScore(ing, foodScores);
     const pen = diversityPenalty(ing, usage, maxPerIng);
-    return { t, score: base - pen, ing };
+    const jitter = (((idx * 31 + rot * 17) % 100) * 0.0015);
+    return { t, score: base - pen + jitter, ing };
   });
   scored.sort((a, b) => b.score - a.score);
   const best = scored[0];
@@ -347,10 +367,29 @@ function pickBestTemplate(templates, getIngredients, foodScores, usage, maxPerIn
   return best.t;
 }
 
+/** Monday-based ISO date (local) for this calendar week. */
+function mondayIsoThisWeek() {
+  const now = new Date();
+  const dow = now.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  const m = new Date(now);
+  m.setDate(m.getDate() + diff);
+  return m.toISOString().slice(0, 10);
+}
+
+function addDaysIso(isoDateStr, days) {
+  const d = new Date(`${isoDateStr}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
  * @param {import('./profileDefaults.js').HealthProfile} profile
+ * @param {{ dayOffset?: number }} [options] — 0–6 varies template picks for weekly variety
  */
-export function buildDailyMealPlan(profile) {
+export function buildDailyMealPlan(profile, options = {}) {
+  const dayOffset = Math.abs(Number(options.dayOffset) || 0) % 7;
+
   const activeWeights = categoryWeightsFromProfile(profile);
   const activeCategories = activeConcernCategories(profile);
 
@@ -373,17 +412,42 @@ export function buildDailyMealPlan(profile) {
     (m) => m.ingredients,
     foodScores,
     usage,
+    2,
+    dayOffset,
   );
-  const lunchT = pickBestTemplate(MEAL_TEMPLATES.lunch, (m) => m.ingredients, foodScores, usage);
-  const dinnerT = pickBestTemplate(MEAL_TEMPLATES.dinner, (m) => m.ingredients, foodScores, usage);
+  const lunchT = pickBestTemplate(
+    MEAL_TEMPLATES.lunch,
+    (m) => m.ingredients,
+    foodScores,
+    usage,
+    2,
+    dayOffset + 2,
+  );
+  const dinnerT = pickBestTemplate(
+    MEAL_TEMPLATES.dinner,
+    (m) => m.ingredients,
+    foodScores,
+    usage,
+    2,
+    dayOffset + 4,
+  );
 
   const snackPool = [...MEAL_TEMPLATES.snack];
-  const snack1 = pickBestTemplate(snackPool, (m) => m.ingredients, foodScores, usage);
+  const snack1 = pickBestTemplate(
+    snackPool,
+    (m) => m.ingredients,
+    foodScores,
+    usage,
+    2,
+    dayOffset,
+  );
   const snack2 = pickBestTemplate(
     snackPool.filter((s) => s.text !== snack1?.text),
     (m) => m.ingredients,
     foodScores,
     usage,
+    2,
+    dayOffset + 3,
   );
   const snack3 = pickBestTemplate(
     snackPool.filter(
@@ -392,6 +456,8 @@ export function buildDailyMealPlan(profile) {
     (m) => m.ingredients,
     foodScores,
     usage,
+    2,
+    dayOffset + 5,
   );
 
   const summary = buildPlanSummary(profile, activeCategories);
@@ -422,3 +488,60 @@ export function buildDailyMealPlan(profile) {
     disclaimer: "Educational meal ideas only—not medical nutrition therapy.",
   };
 }
+
+/**
+ * Seven days Mon–Sun with varied templates; dates anchored to this week’s Monday.
+ * @param {import('./profileDefaults.js').HealthProfile} profile
+ */
+export function buildWeeklyMealPlans(profile) {
+  const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const monday = mondayIsoThisWeek();
+  const week = [];
+  for (let d = 0; d < 7; d++) {
+    const dayPlan = buildDailyMealPlan(profile, { dayOffset: d });
+    const { date: _omit, ...rest } = dayPlan;
+    week.push({
+      dayIndex: d,
+      dayLabel: labels[d],
+      date: addDaysIso(monday, d),
+      ...rest,
+    });
+  }
+  return week;
+}
+
+/**
+ * Daily plan for API + `weeklyPlans` (merged with chat overlay when present).
+ * @param {import('./profileDefaults.js').HealthProfile} profile
+ */
+export function buildMealPlanForApi(profile) {
+  let weeklyPlans = buildWeeklyMealPlans(profile);
+  weeklyPlans = mergeWeeklyPlansWithChat(weeklyPlans, profile.chatMealPlanContext);
+
+  const now = new Date();
+  const dow = now.getDay();
+  const mondayIndex = dow === 0 ? 6 : dow - 1;
+  const todayPlan = weeklyPlans[mondayIndex] ?? buildDailyMealPlan(profile);
+
+  const ctx = profile?.chatMealPlanContext;
+  const chatMealPlanContext =
+    ctx &&
+    typeof ctx === "object" &&
+    (ctx.symptomsMentioned?.length ||
+      ctx.categoryBoosts?.length ||
+      ctx.weeklyDayMeals?.length)
+      ? {
+          updatedAt: ctx.updatedAt,
+          symptomsMentioned: ctx.symptomsMentioned ?? [],
+          categoryBoosts: ctx.categoryBoosts ?? [],
+          hasWeeklyOverlay: Boolean(ctx.weeklyDayMeals?.length === 7),
+        }
+      : null;
+
+  return {
+    ...todayPlan,
+    weeklyPlans,
+    chatMealPlanContext,
+  };
+}
+

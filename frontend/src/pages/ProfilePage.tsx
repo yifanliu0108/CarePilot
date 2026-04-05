@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BodyUnitToggles } from "../components/BodyUnitToggles";
-import { useSession } from "../context/useSession";
+import { useSession } from "../context/SessionContext";
 import {
   formatHeightDisplay,
   formatWeightDisplay,
@@ -105,8 +105,16 @@ export default function ProfilePage() {
       </section>
 
       <section className="cp-card">
-        <h2 className="cp-card__title">Subhealth focus (1–5)</h2>
-        <p className="cp-card__caption">1 = minimal · 5 = strong focus</p>
+        <div className="cp-card__title-row">
+          <h2 className="cp-card__title">Subhealth focus (1–5)</h2>
+          <Link to="/quick-check" className="cp-btn cp-btn--secondary cp-page__edit">
+            Update via quick check
+          </Link>
+        </div>
+        <p className="cp-card__caption">
+          1 = minimal · 5 = strong focus. Re-run the quick check anytime to refresh these scores; body metrics stay
+          under Health input.
+        </p>
         <dl className="cp-dl">
           {ratingField("Sleep & recovery", p.sleepRating)}
           {ratingField("Cognitive & focus", p.cognitiveRating)}

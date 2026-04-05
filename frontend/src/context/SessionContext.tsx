@@ -1,50 +1,18 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   apiFetch,
   clearStoredSessionId,
   getStoredSessionId,
   setStoredSessionId,
 } from "../api/session";
+import { SessionContext, type Me } from "./sessionContextBase";
 
-export type HealthProfile = {
-  age: number | null;
-  heightCm: number | null;
-  weightKg: number | null;
-  bmi: number | null;
-  sleepRating: number | null;
-  cognitiveRating: number | null;
-  digestiveRating: number | null;
-  musculoskeletalRating: number | null;
-  immuneRating: number | null;
-  completedOnboarding: boolean;
-  /** Quick-check multi-select symptom chip ids */
-  symptomTagIds?: string[];
-};
-
-type Me = {
-  username: string;
-  email: string;
-  profile: HealthProfile;
-};
-
-type SessionContextValue = {
-  sessionId: string | null;
-  me: Me | null;
-  loading: boolean;
-  refreshMe: () => Promise<void>;
-  login: (username: string, email: string) => Promise<void>;
-  logout: () => void;
-};
-
-const SessionContext = createContext<SessionContextValue | null>(null);
+export type {
+  ChatMealPlanContext,
+  HealthProfile,
+  Me,
+  SessionContextValue,
+} from "./sessionContextBase";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionId, setSessionId] = useState<string | null>(() => getStoredSessionId());
@@ -142,8 +110,4 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
-export function useSession() {
-  const ctx = useContext(SessionContext);
-  if (!ctx) throw new Error("useSession must be used within SessionProvider");
-  return ctx;
-}
+export { useSession } from "./useSession";

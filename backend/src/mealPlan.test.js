@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildDailyMealPlan } from "./mealPlan.js";
+import { buildDailyMealPlan, buildMealPlanForApi } from "./mealPlan.js";
 
 const empty = {
   age: null,
@@ -74,4 +74,12 @@ test("BMI and age add body-metric bonuses", () => {
   });
   assert.ok(p.summary.includes("BMI"));
   assert.ok(p.summary.includes("Age 70"));
+});
+
+test("meal plan API bundles seven weekly days plus today slice", () => {
+  const profile = { ...empty, symptomTagIds: [], chatMealPlanContext: null };
+  const api = buildMealPlanForApi(profile);
+  assert.equal(api.weeklyPlans.length, 7);
+  assert.ok(api.date && api.meals?.breakfast);
+  assert.equal(api.chatMealPlanContext, null);
 });

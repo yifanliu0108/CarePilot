@@ -25,10 +25,6 @@
   --cp-text-sidebar: #3d4d4a;
   --cp-text-sidebar-muted: #5a6a66;
 
-  /* Logo wordmark + mark (charcoal + muted sage) */
-  --cp-logo-ink: #2d3e40;
-  --cp-logo-sage: #7c9480;
-
   /* Brand — muted sage */
   --cp-accent: #4f736a;
   --cp-accent-hover: #5d867c;
@@ -51,6 +47,9 @@
   --cp-warning-bg: #f4f1e8;
   --cp-warning-border: #e5dcc8;
   --cp-error: #a84840;
+  /* Quick-check Likert: disagree pole (warm, distinct from sage accent) */
+  --cp-likert-disagree: #9a5b52;
+  --cp-likert-disagree-rgb: 154, 91, 82;
 
   /* Landing mesh & soft orbs */
   --cp-mesh-a: #e0e8e5;

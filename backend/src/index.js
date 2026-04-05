@@ -15,7 +15,8 @@ import {
 } from "./geminiAssist.js";
 import { planFromPatientMessage } from "./planFromPatientMessage.js";
 import { nutritionAssist } from "./nutritionAssist.js";
-import { buildDailyMealPlan } from "./mealPlan.js";
+import { buildMealPlanForApi } from "./mealPlan.js";
+import { toStoredChatMealContext } from "./mealPlanFromChat.js";
 import { createSession, getSession, updateProfile } from "./sessionStore.js";
 import { computeBmi } from "./profileDefaults.js";
 import {
@@ -161,7 +162,7 @@ app.get("/api/me/meal-plan", (req, res) => {
     res.status(401).json({ error: "invalid or missing session" });
     return;
   }
-  res.json(buildDailyMealPlan(s.profile));
+  res.json(buildMealPlanForApi(s.profile));
 });
 
 /** Whether Browser Use Cloud API key is set (never expose the key to the client). */
@@ -361,6 +362,11 @@ app.post("/api/journey/assist", async (req, res) => {
     if (geminiConfigured()) {
       try {
         const plan = await assistWithGeminiNutrition(message, history, profile);
+        if (sid && plan.mealPlanUpdate?.apply) {
+          const { apply: _a, ...rest } = plan.mealPlanUpdate;
+          const stored = toStoredChatMealContext(rest);
+          if (stored) updateProfile(sid, { chatMealPlanContext: stored });
+        }
         res.json(plan);
         return;
       } catch (e) {
@@ -374,6 +380,11 @@ app.post("/api/journey/assist", async (req, res) => {
       }
     }
     const plan = nutritionAssist(message, profile);
+    if (sid && plan.mealPlanUpdate?.apply) {
+      const { apply: _a, ...rest } = plan.mealPlanUpdate;
+      const stored = toStoredChatMealContext(rest);
+      if (stored) updateProfile(sid, { chatMealPlanContext: stored });
+    }
     res.json(plan);
   } catch (e) {
     res.status(500).json({ error: e?.message ?? "Assist failed" });

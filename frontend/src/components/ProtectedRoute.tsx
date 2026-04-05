@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useSession } from "../context/useSession";
+import { useSession } from "../context/SessionContext";
 
 export default function ProtectedRoute() {
   const { sessionId, loading } = useSession();

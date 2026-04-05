@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "../api/session";
 
@@ -7,7 +7,7 @@ type MealSlot = {
   labels: string[];
 };
 
-type MealPlan = {
+type MealPlanDay = {
   date: string;
   summary: string;
   concerns: string[];
@@ -22,6 +22,20 @@ type MealPlan = {
   };
   hydration: string;
   disclaimer: string;
+  dayIndex?: number;
+  dayLabel?: string;
+};
+
+type ChatPlanBanner = {
+  updatedAt: string;
+  symptomsMentioned: string[];
+  categoryBoosts: string[];
+  hasWeeklyOverlay: boolean;
+};
+
+type MealPlanApiResponse = MealPlanDay & {
+  weeklyPlans?: MealPlanDay[];
+  chatMealPlanContext?: ChatPlanBanner | null;
 };
 
 function legacyLabelsFromSentence(s: string): string[] {
@@ -40,6 +54,14 @@ function normalizeMealSlot(raw: MealSlot | string): MealSlot {
   }
   const text = String(raw ?? "");
   return { text, labels: legacyLabelsFromSentence(text) };
+}
+
+function todayIsoLocal(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function MealCard({
@@ -73,19 +95,40 @@ function MealCard({
   );
 }
 
+function DayMealsGrid({ plan }: { plan: MealPlanDay }) {
+  const snacks = plan.meals.snacks.map((s) => normalizeMealSlot(s));
+  return (
+    <div className="cp-plan__grid">
+      <MealCard mealTitle="Breakfast" slot={plan.meals.breakfast} ariaLabel="Breakfast foods" />
+      <MealCard mealTitle="Lunch" slot={plan.meals.lunch} ariaLabel="Lunch foods" />
+      <MealCard mealTitle="Dinner" slot={plan.meals.dinner} ariaLabel="Dinner foods" />
+      {snacks.map((snack, i) => (
+        <MealCard
+          key={`${snack.text}-${i}`}
+          mealTitle={`Snack ${i + 1}`}
+          slot={snack}
+          ariaLabel={`Snack ${i + 1} foods`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function PlanPage() {
-  const [plan, setPlan] = useState<MealPlan | null>(null);
+  const [payload, setPayload] = useState<MealPlanApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const todayStr = useMemo(() => todayIsoLocal(), []);
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
         const r = await apiFetch("/api/me/meal-plan");
-        const data = (await r.json()) as MealPlan & { error?: string };
+        const data = (await r.json()) as MealPlanApiResponse & { error?: string };
         if (!r.ok) throw new Error(data.error ?? "Could not load plan");
-        if (!cancelled) setPlan(data);
+        if (!cancelled) setPayload(data);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Error");
       } finally {
@@ -107,7 +150,7 @@ export default function PlanPage() {
     );
   }
 
-  if (error || !plan) {
+  if (error || !payload) {
     return (
       <div className="cp-page cp-page--plan">
         <div className="cp-page__inner">
@@ -122,97 +165,164 @@ export default function PlanPage() {
     );
   }
 
-  const snacks = plan.meals.snacks.map((s) => normalizeMealSlot(s));
+  const week = payload.weeklyPlans?.length === 7 ? payload.weeklyPlans : null;
+  const chat = payload.chatMealPlanContext;
 
   return (
     <div className="cp-page cp-page--plan">
       <div className="cp-page__inner">
         <header className="cp-page__head">
-          <h1 className="cp-page__title">Daily meal plan</h1>
+          <h1 className="cp-page__title">{week ? "Weekly meal plan" : "Daily meal plan"}</h1>
           <p className="cp-page__sub">
-            For {plan.date}. Uses your <strong>body metrics</strong> and{" "}
-            <strong>subhealth ratings 1–5</strong> in the planner.
+            {week ? (
+              <>
+                Seven days starting Monday of this week. Built from your <strong>Health input</strong> subhealth
+                scores and body metrics; nutrition <strong>chat</strong> can add symptom-aware tweaks and a full-week
+                overlay when you describe how you feel.
+              </>
+            ) : (
+              <>
+                For {payload.date}. Uses your <strong>body metrics</strong> and{" "}
+                <strong>subhealth ratings 1–5</strong> in the planner.
+              </>
+            )}
           </p>
         </header>
 
-        <p className="cp-plan__summary">{plan.summary}</p>
-
-        {plan.topFoods && plan.topFoods.length > 0 ? (
-          <section
-            className="cp-card cp-card--tight"
-            aria-labelledby="plan-foods-heading"
-          >
-            <h2 id="plan-foods-heading" className="cp-card__title">
-              Ingredients emphasized today
-            </h2>
-            <ul className="cp-food-labels" aria-label="Foods to emphasize">
-              {plan.topFoods.map((f) => (
-                <li key={f} className="cp-food-labels__item">
-                  <span className="cp-food-label">{f}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+        {chat && (chat.symptomsMentioned.length > 0 || chat.hasWeeklyOverlay) ? (
+          <div className="cp-plan__chat-banner" role="status">
+            <strong>From your chat:</strong>{" "}
+            {chat.symptomsMentioned.length > 0 ? (
+              <span>{chat.symptomsMentioned.join(" · ")}</span>
+            ) : (
+              <span>Meal emphasis updated</span>
+            )}
+            {chat.hasWeeklyOverlay ? (
+              <span> · Full week of meal lines was synced from the assistant.</span>
+            ) : (
+              <span>
+                {" "}
+                · Ingredient scoring was nudged
+                {chat.categoryBoosts.length > 0
+                  ? ` toward: ${chat.categoryBoosts.join(", ").replace(/_/g, " ")}.`
+                  : "."}
+              </span>
+            )}
+            <span className="cp-plan__chat-meta">
+              {" "}
+              (updated {new Date(chat.updatedAt).toLocaleString()})
+            </span>
+          </div>
         ) : null}
 
-        {plan.foodsToLimit && plan.foodsToLimit.length > 0 ? (
-          <section
-            className="cp-card cp-card--tight"
-            aria-labelledby="plan-limit-heading"
-          >
-            <h2 id="plan-limit-heading" className="cp-card__title">
-              Patterns to ease up on
-            </h2>
-            <ul className="cp-food-labels" aria-label="Patterns to limit">
-              {plan.foodsToLimit.map((a) => (
-                <li key={a} className="cp-food-labels__item">
-                  <span className="cp-food-label cp-food-label--muted">
-                    {a}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        {!week ? (
+          <>
+            <p className="cp-plan__summary">{payload.summary}</p>
+            {payload.topFoods && payload.topFoods.length > 0 ? (
+              <section className="cp-card cp-card--tight" aria-labelledby="plan-foods-heading">
+                <h2 id="plan-foods-heading" className="cp-card__title">
+                  Ingredients emphasized today
+                </h2>
+                <ul className="cp-food-labels" aria-label="Foods to emphasize">
+                  {payload.topFoods.map((f) => (
+                    <li key={f} className="cp-food-labels__item">
+                      <span className="cp-food-label">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            {payload.foodsToLimit && payload.foodsToLimit.length > 0 ? (
+              <section className="cp-card cp-card--tight" aria-labelledby="plan-limit-heading">
+                <h2 id="plan-limit-heading" className="cp-card__title">
+                  Patterns to ease up on
+                </h2>
+                <ul className="cp-food-labels" aria-label="Patterns to limit">
+                  {payload.foodsToLimit.map((a) => (
+                    <li key={a} className="cp-food-labels__item">
+                      <span className="cp-food-label cp-food-label--muted">{a}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+            <DayMealsGrid plan={payload} />
+          </>
+        ) : (
+          week.map((day) => {
+            const isToday = day.date === todayStr;
+            return (
+              <details
+                key={`${day.dayLabel}-${day.date}`}
+                className="cp-plan__week-section"
+                open={isToday}
+              >
+                <summary className="cp-plan__week-head">
+                  {day.dayLabel ?? "Day"} · {day.date}
+                  {isToday ? <span className="cp-plan__today-badge"> Today</span> : null}
+                </summary>
+                <p className="cp-plan__summary cp-plan__summary--compact">{day.summary}</p>
+                {day.topFoods && day.topFoods.length > 0 ? (
+                  <section className="cp-card cp-card--tight" aria-labelledby={`foods-${day.date}`}>
+                    <h2 id={`foods-${day.date}`} className="cp-card__title">
+                      Ingredients emphasized
+                    </h2>
+                    <ul className="cp-food-labels" aria-label="Foods to emphasize">
+                      {day.topFoods.map((f) => (
+                        <li key={f} className="cp-food-labels__item">
+                          <span className="cp-food-label">{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {day.foodsToLimit && day.foodsToLimit.length > 0 ? (
+                  <section className="cp-card cp-card--tight" aria-labelledby={`limit-${day.date}`}>
+                    <h2 id={`limit-${day.date}`} className="cp-card__title">
+                      Patterns to ease up on
+                    </h2>
+                    <ul className="cp-food-labels" aria-label="Patterns to limit">
+                      {day.foodsToLimit.map((a) => (
+                        <li key={a} className="cp-food-labels__item">
+                          <span className="cp-food-label cp-food-label--muted">{a}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                <DayMealsGrid plan={day} />
+                <section className="cp-card cp-card--tight">
+                  <p className="cp-plan__hydration">
+                    <strong>Hydration:</strong> {day.hydration}
+                  </p>
+                  <p className="cp-plan__disclaimer">{day.disclaimer}</p>
+                </section>
+              </details>
+            );
+          })
+        )}
+
+        {!week ? (
+          <section className="cp-card cp-card--tight">
+            <p className="cp-plan__hydration">
+              <strong>Hydration:</strong> {payload.hydration}
+            </p>
+            <p className="cp-plan__disclaimer">{payload.disclaimer}</p>
+            <Link to="/chat" className="cp-btn cp-btn--secondary cp-plan__discuss">
+              Discuss in chat
+            </Link>
           </section>
-        ) : null}
-
-        <div className="cp-plan__grid">
-          <MealCard
-            mealTitle="Breakfast"
-            slot={plan.meals.breakfast}
-            ariaLabel="Breakfast foods"
-          />
-          <MealCard
-            mealTitle="Lunch"
-            slot={plan.meals.lunch}
-            ariaLabel="Lunch foods"
-          />
-          <MealCard
-            mealTitle="Dinner"
-            slot={plan.meals.dinner}
-            ariaLabel="Dinner foods"
-          />
-          {snacks.map((snack, i) => (
-            <MealCard
-              key={`${snack.text}-${i}`}
-              mealTitle={`Snack ${i + 1}`}
-              slot={snack}
-              ariaLabel={`Snack ${i + 1} foods`}
-            />
-          ))}
-        </div>
-
-        <section className="cp-card cp-card--tight">
-          <p className="cp-plan__hydration">
-            <strong>Hydration:</strong> {plan.hydration}
-          </p>
-          <p className="cp-plan__disclaimer">{plan.disclaimer}</p>
-          <Link
-            to="/chat"
-            className="cp-btn cp-btn--secondary cp-plan__discuss"
-          >
-            Discuss in chat
-          </Link>
-        </section>
+        ) : (
+          <section className="cp-card cp-card--tight">
+            <Link to="/chat" className="cp-btn cp-btn--secondary cp-plan__discuss">
+              Update from chat
+            </Link>
+            <p className="cp-plan__disclaimer" style={{ marginTop: "0.75rem" }}>
+              Mention symptoms or goals in nutrition chat (with Gemini enabled) to refresh this week&apos;s structure.
+              Browser Use grocery runs stay separate—use them to price-check items the assistant suggests.
+            </p>
+          </section>
+        )}
       </div>
     </div>
   );

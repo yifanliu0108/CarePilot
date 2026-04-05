@@ -5,7 +5,7 @@
 
 export type QuickDomain = "sleep" | "energy" | "stress" | "focus" | "pain";
 
-/** Shared 5-point Likert (16Personalities-style): left = agree with positive statement, right = disagree. Risk 1 = best health, 5 = worst. */
+/** Shared 5-point Likert: risk 1 = best (strongly agree with positive statement), 5 = worst. */
 export type LikertOption = {
   risk: 1 | 2 | 3 | 4 | 5;
   label: string;
@@ -18,6 +18,9 @@ export const LIKERT_OPTIONS: LikertOption[] = [
   { risk: 4, label: "Disagree" },
   { risk: 5, label: "Strongly disagree" },
 ];
+
+/** Left → right on screen: strongly disagree … strongly agree (poles: Disagree | ○○○○○ | Agree). */
+export const LIKERT_OPTIONS_VISUAL: LikertOption[] = [...LIKERT_OPTIONS].reverse();
 
 export type QuickQuestion = {
   id: QuickDomain;
@@ -81,15 +84,79 @@ export function risksFromAnswers(selectedRisks: number[]): RiskRow {
   };
 }
 
-/**
- * Spec: sleep = 6 - sleep_score with sleep_score as "positive" coding — equivalent to using risk directly when options are ordered worst←best as risk 5←1.
- * overall_risk weighted average on same 1–5 risk scale.
- */
+/** Weights for blended risk (same scale as each answer: 1–5, higher = more concern). */
+export const DOMAIN_WEIGHTS: Record<keyof RiskRow, number> = {
+  sleep: 0.25,
+  energy: 0.2,
+  stress: 0.2,
+  focus: 0.15,
+  pain: 0.2,
+};
+
+export const DOMAIN_ORDER: (keyof RiskRow)[] = ["sleep", "energy", "stress", "focus", "pain"];
+
+export const DOMAIN_LABELS: Record<keyof RiskRow, string> = {
+  sleep: "Sleep quality",
+  energy: "Energy & fatigue",
+  stress: "Stress & calm",
+  focus: "Focus & attention",
+  pain: "Physical comfort",
+};
+
+/** Weighted average on the 1–5 risk scale (used for the ring % and pattern context). */
 export function overallRisk(r: RiskRow): number {
-  const { sleep, energy, stress, focus, pain } = r;
-  return (
-    0.25 * sleep + 0.2 * energy + 0.2 * stress + 0.15 * focus + 0.2 * pain
-  );
+  return DOMAIN_ORDER.reduce((sum, key) => sum + DOMAIN_WEIGHTS[key] * r[key], 0);
+}
+
+export type DomainBreakdownItem = {
+  key: keyof RiskRow;
+  label: string;
+  weightPct: number;
+  risk: number;
+};
+
+export function domainBreakdown(r: RiskRow): DomainBreakdownItem[] {
+  return DOMAIN_ORDER.map((key) => ({
+    key,
+    label: DOMAIN_LABELS[key],
+    weightPct: Math.round(DOMAIN_WEIGHTS[key] * 100),
+    risk: r[key],
+  }));
+}
+
+/**
+ * Blended risk (~1–5, higher = more concern) → 0–100% contribution from Likert answers alone.
+ */
+export function signalStrengthPercent(blendedRisk: number): number {
+  const clamped = Math.min(5, Math.max(1, blendedRisk));
+  return Math.min(100, Math.max(0, Math.round(((clamped - 1) / 4) * 100)));
+}
+
+/** Each optional early-signal tag adds a small bump; cap keeps the index bounded. */
+export const EARLY_SIGNAL_LIKELIHOOD_PCT_EACH = 3.5;
+export const EARLY_SIGNAL_LIKELIHOOD_PCT_MAX = 28;
+
+export function earlySignalLikelihoodBump(earlySignalTagCount: number): number {
+  const n = Math.max(0, earlySignalTagCount);
+  return Math.min(EARLY_SIGNAL_LIKELIHOOD_PCT_MAX, n * EARLY_SIGNAL_LIKELIHOOD_PCT_EACH);
+}
+
+/**
+ * 0–100% educational subhealth score from (1) weighted Likert answers and
+ * (2) how many early-signal options were selected. Not a clinical measure.
+ */
+export function illnessLikelihoodIndexPercent(
+  blendedRisk: number,
+  earlySignalTagCount: number,
+): number {
+  const base = signalStrengthPercent(blendedRisk);
+  const bump = earlySignalLikelihoodBump(earlySignalTagCount);
+  return Math.min(100, Math.round(base + bump));
+}
+
+/** If only symptom tags apply (no blended score yet), use bump rounded to 0–100. */
+export function symptomsOnlyLikelihoodPercent(earlySignalTagCount: number): number {
+  return Math.min(100, Math.round(earlySignalLikelihoodBump(earlySignalTagCount)));
 }
 
 export type PatternId =

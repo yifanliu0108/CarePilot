@@ -5,6 +5,27 @@
 
 const norm = (s) => String(s ?? "").toLowerCase();
 
+/** Maps nutritionAssist category key → mealPlan.js category id */
+const NUTRITION_CAT_TO_BOOST = {
+  sleep: "sleep_recovery",
+  cognitive: "cognitive_focus",
+  digestive: "digestive",
+  musculoskeletal: "musculoskeletal",
+  immune: "immune",
+};
+
+/** Seven-day scaffold for demo when Gemini is off; mirrors structured chat → meal plan sync. */
+function genericMockWeekly(themeShort) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return days.map((day) => ({
+    day,
+    breakfast: `${day}: Whole grains plus protein (eggs or yogurt); water or herbal tea — ${themeShort}.`,
+    lunch: `${day}: Vegetables, olive oil, beans or fish; easy portion — ${themeShort}.`,
+    dinner: `${day}: Cooked vegetables, lean protein, gentle seasonings — ${themeShort}.`,
+    snacks: ["Fresh fruit", "Small handful of nuts"],
+  }));
+}
+
 const CATEGORIES = {
   sleep: {
     keywords: /\b(sleep|insomnia|rest|recovery|fatigue|tired|circadian)\b/,
@@ -205,6 +226,18 @@ export function nutritionAssist(message, profile = null) {
 
   const id = `nut-${Date.now().toString(36)}`;
 
+  /** Symptom- or topic-aware mock: structured week + boosts so meal plan API updates without Gemini. */
+  let mealPlanUpdate;
+  if (key !== "subhealth") {
+    const boost = NUTRITION_CAT_TO_BOOST[key];
+    mealPlanUpdate = {
+      apply: true,
+      symptomsMentioned: [trimmed.slice(0, 96) || def.task],
+      categoryBoosts: boost ? [boost] : [],
+      weeklyDayMeals: genericMockWeekly(def.task),
+    };
+  }
+
   return {
     intent: `nutrition_${key}`,
     assistantText,
@@ -219,5 +252,6 @@ export function nutritionAssist(message, profile = null) {
       note:
         "Run “Browser Use Cloud” to search Walmart, Vons, and Ralphs for the items above (prices are best-effort; sites may block bots). Not medical advice.",
     },
+    ...(mealPlanUpdate ? { mealPlanUpdate } : {}),
   };
 }
